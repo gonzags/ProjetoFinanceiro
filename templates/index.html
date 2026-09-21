@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ledger Horizon | Plataforma Analítica Financeira</title>
+  
+  <!-- Estilos e Fontes OFL -->
+  <link rel="stylesheet" href="/static/css/ledger_horizon.css">
+  
+  <!-- ApexCharts CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+  <div class="lh-container">
+    
+    <!-- Cabeçalho Principal -->
+    <header class="lh-header" role="banner">
+      <div class="lh-brand">
+        <div class="lh-logo-icon" aria-hidden="true">LH</div>
+        <div class="lh-brand-text">
+          <h1>Ledger Horizon</h1>
+          <p>Plataforma Analítica Financeira & Engenharia de Analytics • Pedro Silva</p>
+        </div>
+      </div>
+
+      <div class="lh-header-actions">
+        <!-- Badge de Estado do Banco / Sistema (3 estados auditados) -->
+        <div id="headerStatusBadge" class="lh-badge lh-badge-status-demo" role="status" aria-live="polite">
+          <span class="lh-status-dot"></span>
+          <span id="headerStatusText">{{ status_badge }}</span>
+        </div>
+
+        <!-- Botão Abrir Questionário -->
+        <button class="lh-btn" onclick="toggleQuestionnaireModal(true)" aria-label="Abrir questionário de ajuste orçamentário">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span>Ajustar Parâmetros</span>
+        </button>
+
+        <!-- Toggle Modo Escuro / Claro -->
+        <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Alternar modo de contraste">
+          <svg id="themeIconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="themeIconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Grade de KPIs Principais (Outubro) -->
+    <main role="main">
+      <section class="lh-kpi-grid" aria-label="Indicadores Chave de Desempenho">
+        <div class="lh-kpi-card" style="--card-accent: var(--lh-cobalt);">
+          <div class="lh-kpi-label">Entradas Totais (Outubro)</div>
+          <div class="lh-kpi-value tabular-nums" id="kpiIncome">R$ 2.133,42</div>
+          <div class="lh-kpi-subtitle">Salário R$ 1.843,42 + Extras R$ 290,00</div>
+        </div>
+
+        <div class="lh-kpi-card" style="--card-accent: var(--lh-cobalt);">
+          <div class="lh-kpi-label">Custos Fixos Contratados</div>
+          <div class="lh-kpi-value tabular-nums" id="kpiFixed">R$ 285,00</div>
+          <div class="lh-kpi-subtitle">13,3% da renda • 5 serviços cadastrados</div>
+        </div>
+
+        <div class="lh-kpi-card" style="--card-accent: var(--lh-amber-ui);">
+          <div class="lh-kpi-label">Compromissos & Dívidas</div>
+          <div class="lh-kpi-value tabular-nums" id="kpiDebts">R$ 1.736,83</div>
+          <div class="lh-kpi-subtitle">PicPay R$ 539 • Nu R$ 697 • Viagem R$ 500</div>
+        </div>
+
+        <div class="lh-kpi-card" style="--card-accent: var(--lh-green);">
+          <div class="lh-kpi-label">Sobra Líquida Real</div>
+          <div class="lh-kpi-value tabular-nums text-green" id="kpiSurplus">+ R$ 111,59</div>
+          <div class="lh-kpi-subtitle" id="kpiSurplusDiag">Zona crítica controlada • Saldo positivo</div>
+        </div>
+      </section>
+
+      <!-- Elemento Visual Marcante: The Debt-Free Horizon Gauge -->
+      <section class="lh-horizon-section" aria-labelledby="gaugeTitle">
+        <div class="lh-horizon-header">
+          <div class="lh-horizon-title" id="gaugeTitle">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cobalt">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>The Debt-Free Horizon Gauge (Régua de Liquidez)</span>
+          </div>
+          <div class="lh-horizon-meta tabular-nums">
+            Alvo de Liberdade: <strong>{{ target_liberty }}</strong> • Restam <strong>{{ months_remaining }} meses</strong>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso Acessível -->
+        <div class="lh-gauge-track" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso rumo à liquidação das dívidas de cartão">
+          <div class="lh-gauge-fill" style="width: 38%;"></div>
+        </div>
+
+        <!-- Marcos Principais da Trajetória -->
+        <div class="lh-milestones-grid">
+          <div class="lh-milestone-item">
+            <div class="lh-milestone-month">Outubro 2026</div>
+            <div class="lh-milestone-details">Zona Crítica (Sobra R$ 111,59)</div>
+          </div>
+          <div class="lh-milestone-item">
+            <div class="lh-milestone-month">Novembro 2026</div>
+            <div class="lh-milestone-details">Alívio (+R$ 821) • Aporte R$ 500</div>
+          </div>
+          <div class="lh-milestone-item">
+            <div class="lh-milestone-month">Dezembro 2026</div>
+            <div class="lh-milestone-details">Folga Sólida (+R$ 1.026)</div>
+          </div>
+          <div class="lh-milestone-item">
+            <div class="lh-milestone-month">Abril 2027+</div>
+            <div class="lh-milestone-details text-green"><strong>Liberdade: 80% Renda Livre</strong></div>
+          </div>
+        </div>
+
+        <!-- Informações de Fechamento de Fatura -->
+        <div class="lh-card-cutoffs">
+          <span class="lh-cutoff-tag">
+            <strong>PicPay:</strong> Fechamento todo dia 27
+          </span>
+          <span class="lh-cutoff-tag">
+            <strong>Nubank:</strong> Fechamento todo dia 04
+          </span>
+          <span class="lh-cutoff-tag">
+            <strong>Vale Refeição:</strong> R$ 500/mês (Alimentação 100% blindada)
+          </span>
+        </div>
+      </section>
+
+      <!-- Grade Principal de Visualizações Analíticas -->
+      <div class="lh-main-grid">
+        
+        <!-- Gráfico do Fluxo de Caixa Mês a Mês -->
+        <div class="lh-card">
+          <div class="lh-card-header">
+            <div>
+              <h2 class="lh-card-title">Fluxo de Caixa Projetado (Outubro a Agosto)</h2>
+              <p style="font-size: 0.8rem; color: var(--lh-ink-subdued); margin-top: 2px;">
+                Entradas totais vs Custos fixos, parcelamentos de cartão e sobra líquida real
+              </p>
+            </div>
+          </div>
+          <div id="chartCashFlowTimeline" style="min-height: 320px;"></div>
+        </div>
+
+        <!-- Seletor e Gráfico de Metodologia Orçamentária -->
+        <div class="lh-card">
+          <div class="lh-card-header">
+            <div>
+              <h2 class="lh-card-title">Metodologia</h2>
+              <p style="font-size: 0.8rem; color: var(--lh-ink-subdued); margin-top: 2px;">
+                Distribuição por pilares orçamentários
+              </p>
+            </div>
+            <!-- Seletor de Metodologias -->
+            <div class="lh-pills-selector" role="radiogroup" aria-label="Seletor de Metodologias">
+              <button class="lh-pill-btn active" onclick="switchMethodology('50-30-20', this)">50-30-20</button>
+              <button class="lh-pill-btn" onclick="switchMethodology('60-20-20', this)">60-20-20</button>
+              <button class="lh-pill-btn" onclick="switchMethodology('70-20-10', this)">70-20-10</button>
+              <button class="lh-pill-btn" onclick="switchMethodology('zero_based', this)">Base Zero</button>
+            </div>
+          </div>
+          <div id="chartMethodologyDonut" style="min-height: 250px;"></div>
+          <div id="methodologyDetails" style="margin-top: 12px; font-size: 0.8rem; color: var(--lh-ink-subdued); text-align: center;">
+            Necessidades: <strong>50%</strong> • Desejos: <strong>30%</strong> • Futuro: <strong>20%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Componente do Hub de Decisões do Comitê Multi-IA -->
+      {% include 'components/decision_hub.html' %}
+
+    </main>
+  </div>
+
+  <!-- Modal do Questionário Financeiro -->
+  {% include 'components/questionnaire.html' %}
+
+  <!-- JavaScript do Dashboard -->
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

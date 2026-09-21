@@ -1,0 +1,54 @@
+{
+  "profile": {
+    "user_name": "Usuário Exemplo",
+    "salary_net": 2000.00,
+    "benefits_vr": 500.00,
+    "receivables": [
+      {"name": "Parcela Extra 1", "amount": 100.00, "months": ["Outubro", "Novembro", "Dezembro"]},
+      {"name": "Parcela Extra 2", "amount": 150.00, "months": ["Outubro", "Novembro", "Dezembro", "Janeiro", "Fevereiro"]}
+    ]
+  },
+  "fixed_expenses": [
+    {"name": "Academia", "amount": 120.00, "category": "Saúde"},
+    {"name": "Internet", "amount": 100.00, "category": "Conectividade"},
+    {"name": "Serviços Digitais", "amount": 30.00, "category": "Assinaturas"}
+  ],
+  "card_schedules": {
+    "Card_A": {
+      "closing_day": 25,
+      "installments": {
+        "Outubro": 450.00,
+        "Novembro": 350.00,
+        "Dezembro": 250.00,
+        "Janeiro": 150.00,
+        "Fevereiro": 100.00,
+        "Março": 100.00,
+        "Abril": 50.00,
+        "Maio": 50.00,
+        "Junho": 50.00,
+        "Julho": 0.00,
+        "Agosto": 0.00
+      }
+    },
+    "Card_B": {
+      "closing_day": 5,
+      "installments": {
+        "Outubro": 500.00,
+        "Novembro": 400.00,
+        "Dezembro": 300.00,
+        "Janeiro": 200.00,
+        "Fevereiro": 200.00,
+        "Março": 150.00,
+        "Abril": 30.00,
+        "Maio": 30.00,
+        "Junho": 30.00,
+        "Julho": 30.00,
+        "Agosto": 30.00
+      }
+    }
+  },
+  "one_off_commitments": [
+    {"name": "Dívida pontual", "amount": 50.00, "month": "Outubro"},
+    {"name": "Evento especial", "amount": 400.00, "month": "Outubro"}
+  ]
+}

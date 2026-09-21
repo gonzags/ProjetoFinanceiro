@@ -1,0 +1,56 @@
+<!-- Modal do Questionário Financeiro Interativo -->
+<div id="questionnaireModal" class="lh-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="lh-modal">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 id="modalTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--lh-ink-main);">
+        Simulador e Questionário Orçamentário
+      </h2>
+      <button type="button" class="lh-btn lh-btn-sm" onclick="toggleQuestionnaireModal(false)" aria-label="Fechar Modal">✕</button>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--lh-ink-subdued); margin-bottom: 20px;">
+      Ajuste suas variáveis financeiras. Ao salvar, os KPIs serão recalculados e o cache do comitê de IA será invalidado para nova deliberação.
+    </p>
+
+    <form id="questionnaireForm" onsubmit="submitQuestionnaire(event)">
+      <div class="lh-form-group">
+        <label class="lh-form-label" for="inputSalaryNet">Salário Líquido Mensal (R$)</label>
+        <input type="number" step="0.01" id="inputSalaryNet" class="lh-form-input" value="1843.42" required>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="lh-form-group">
+          <label class="lh-form-label" for="inputPicPay">Fatura PicPay Outubro (R$)</label>
+          <input type="number" step="0.01" id="inputPicPay" class="lh-form-input" value="539.00" required>
+        </div>
+        <div class="lh-form-group">
+          <label class="lh-form-label" for="inputNubank">Fatura Nubank Outubro (R$)</label>
+          <input type="number" step="0.01" id="inputNubank" class="lh-form-input" value="697.44" required>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="lh-form-group">
+          <label class="lh-form-label" for="inputSpecialEvent">Compromisso Pontual / Viagem (R$)</label>
+          <input type="number" step="0.01" id="inputSpecialEvent" class="lh-form-input" value="500.00">
+        </div>
+        <div class="lh-form-group">
+          <label class="lh-form-label" for="inputFriendDebt">Quitação Amigo Outubro (R$)</label>
+          <input type="number" step="0.01" id="inputFriendDebt" class="lh-form-input" value="70.00">
+        </div>
+      </div>
+
+      <div class="lh-form-group">
+        <label class="lh-form-label">Custos Fixos Mensais Atuais (Total: R$ 285,00)</label>
+        <div style="background: var(--lh-panel-alt); padding: 10px 14px; border-radius: var(--lh-radius-md); font-size: 0.8rem; color: var(--lh-ink-subdued); border: 1px solid var(--lh-border);">
+          Academia (R$ 164,50) • Net Residencial (R$ 60,00) • Móvel (R$ 45,00) • Spotify (R$ 11,00) • Google (R$ 4,50)
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="lh-btn" onclick="toggleQuestionnaireModal(false)">Cancelar</button>
+        <button type="submit" id="saveQuestionnaireBtn" class="lh-btn lh-btn-primary">Salvar e Atualizar Projeções</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+<!-- Hub de Decisões do Comitê de Inteligência Artificial Multi-Agente -->
+<section class="lh-decision-hub" id="decisionHubSection" aria-labelledby="decisionHubTitle">
+  <div class="lh-card-header">
+    <div>
+      <h2 id="decisionHubTitle" class="lh-card-title" style="display: flex; align-items: center; gap: 8px;">
+        <span>Comitê de Consenso Multi-IA</span>
+        <span id="consensusBadge" class="lh-badge lh-badge-status-connected">
+          <span class="lh-status-dot"></span>
+          <span id="consensusBadgeText">Carregando parecer...</span>
+        </span>
+      </h2>
+      <p style="font-size: 0.82rem; color: var(--lh-ink-subdued); margin-top: 4px;">
+        Deliberação autônoma entre até 5 provedores gratuitos (Groq, Gemini, Mistral, OpenRouter, Cloudflare) com convergência numérica e teto de 3 rodadas.
+      </p>
+    </div>
+    
+    <div>
+      <button id="recalculateBtn" class="lh-btn lh-btn-primary" onclick="recalculateConsensus()" aria-label="Recalcular Decisões do Comitê">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        <span id="recalculateBtnText">Recalcular Decisões</span>
+      </button>
+      <div id="rateLimitNotice" style="display: none; font-size: 0.72rem; color: var(--lh-amber-ink); margin-top: 4px; text-align: right;">
+        Limite de 3 requisições/hora por IP.
+      </div>
+    </div>
+  </div>
+
+  <!-- Caixas de Alocação do Consenso -->
+  <div class="lh-alloc-boxes">
+    <div class="lh-alloc-box nec">
+      <div class="lh-alloc-box-label">Necessidades Recomendadas</div>
+      <div class="lh-alloc-box-val tabular-nums" id="aiAllocNec">--%</div>
+      <div style="font-size: 0.75rem; color: var(--lh-ink-subdued); margin-top: 4px;">Fixos + Essenciais</div>
+    </div>
+
+    <div class="lh-alloc-box des">
+      <div class="lh-alloc-box-label">Desejos & Lazer</div>
+      <div class="lh-alloc-box-val tabular-nums" id="aiAllocDes">--%</div>
+      <div style="font-size: 0.75rem; color: var(--lh-ink-subdued); margin-top: 4px;">Flexível / Margem</div>
+    </div>
+
+    <div class="lh-alloc-box fut">
+      <div class="lh-alloc-box-label">Futuro & Quitação</div>
+      <div class="lh-alloc-box-val tabular-nums" id="aiAllocFut">--%</div>
+      <div style="font-size: 0.75rem; color: var(--lh-ink-subdued); margin-top: 4px;">Dívidas + Reservas</div>
+    </div>
+  </div>
+
+  <!-- Síntese da Deliberação e Score de Confiança -->
+  <div style="margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--lh-ink-subdued);">Parecer Sintetizado do Comitê</span>
+      <span style="font-size: 0.8rem; font-weight: 700; color: var(--lh-cobalt);" id="aiConfidenceScore">Confiança: --%</span>
+    </div>
+    <div class="lh-reasoning-quote" id="aiReasoningQuote">
+      Aguardando processamento analítico...
+    </div>
+  </div>
+
+  <!-- Sinais de Risco Identificados -->
+  <div>
+    <div style="font-size: 0.8rem; font-weight: 600; color: var(--lh-ink-subdued); margin-bottom: 8px;">
+      Sinais de Risco e Alertas do Comitê
+    </div>
+    <div class="lh-risk-tags" id="aiRiskTagsContainer">
+      <span class="lh-risk-tag">Analisando compromissos de Outubro...</span>
+    </div>
+  </div>
+
+  <!-- Metadados de Execução / Provedores Ativos -->
+  <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--lh-border); font-size: 0.75rem; color: var(--lh-ink-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+    <span id="aiProvidersMeta">Provedores participantes: Verificando...</span>
+    <span id="aiRoundsMeta">Rodadas executadas: 0</span>
+  </div>
+</section>

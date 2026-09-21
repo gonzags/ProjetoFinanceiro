@@ -1,0 +1,28 @@
+# Variáveis de ambiente e segredos
+.env
+.env.local
+.env.*.local
+
+# Dados financeiros pessoais reais (protege de ir para o Git)
+seed_data.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Testes e cobertura
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs e arquivos do sistema
+*.log
+.DS_Store
+Thumbs.db
