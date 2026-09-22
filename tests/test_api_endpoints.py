@@ -44,17 +44,14 @@ def test_api_status(client):
 
 
 def test_api_kpis(client):
-    """KPIs de Outubro devem retornar valores consistentes com o histórico real."""
+    """Sem usuário autenticado, /api/kpis retorna estado vazio (sem seed data)."""
     resp = client.get("/api/kpis?month=Outubro")
     assert resp.status_code == 200
     data = resp.json()
-    s = data["summary"]
-    assert s["total_income"] == 2133.42
-    assert s["fixed_costs"] == 285.00
-    assert s["picpay_amount"] == 539.00
-    assert s["nubank_amount"] == 697.83
-    assert s["special_events"] == 500.00  # Viagem
-    assert s["net_surplus"] == 111.59
+    # Com o guard de onboarding, retorna empty=True e sem dados de seed
+    assert data.get("empty") is True
+    assert data["summary"] == {}
+    assert data["metrics"] == {}
 
 
 def test_api_timeline(client):

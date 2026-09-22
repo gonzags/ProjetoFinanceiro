@@ -628,21 +628,27 @@ async def index_page(request: Request):
     """Dashboard principal — exige onboarding concluído."""
     user = await get_current_user(request) if ENABLE_AUTH else None
 
-    # Redireciona para onboarding se ainda não concluído
+    # Redireciona para onboarding se ainda não concluído (com auth ativa)
     if ENABLE_AUTH and user and not user.get("onboarding_completed"):
         return RedirectResponse(url="/onboarding", status_code=status.HTTP_303_SEE_OTHER)
 
-    user_id = user["id"] if user else None
-    is_returning = user and user.get("onboarding_completed", False)
-    first_name = user["name"].split()[0] if user else db_manager.get_display_name()
-    greeting = f"Bem-vindo de volta, {first_name}!" if is_returning else f"Bem-vindo, {first_name}!"
-
-    # Carregar resumo do mês corrente
     now = datetime.now(timezone.utc)
-    if ENABLE_AUTH and user_id:
+
+    # Usuário autenticado com onboarding completo → dados reais
+    if user and user.get("onboarding_completed"):
+        user_id = user["id"]
+        first_name = user["name"].split()[0] if user.get("name") else "Usuário"
+        greeting = f"Bem-vindo de volta, {first_name}!"
+        is_returning = True
         summary = await db_manager.get_monthly_summary(user_id, now.year, now.month)
     else:
-        summary = await db_manager.get_financial_summary("Outubro")
+        # Novo usuário (sem auth ou sem onboarding): dashboard vazio — sem seed data
+        user_id = None
+        is_returning = False
+        first_name = "Usuário"
+        greeting = "Bem-vindo ao Ledger Horizon!"
+        summary = None   # JS mostrará estado vazio, não seed
+
     status_badge = db_manager.get_connection_status()
 
     return templates.TemplateResponse(
@@ -658,8 +664,8 @@ async def index_page(request: Request):
             "current_year": now.year,
             "current_month": now.month,
             "enable_auth": ENABLE_AUTH,
-            "target_liberty": "Abril de 2027",
-            "months_remaining": 7,
+            "target_liberty": "—",
+            "months_remaining": "—",
         }
     )
 
@@ -681,28 +687,27 @@ async def get_system_status():
 
 @app.get("/api/kpis")
 async def get_kpis(request: Request, month: str = "Outubro"):
-    """Retorna os indicadores chave de desempenho para o mês solicitado."""
+    """Retorna KPIs do mês — apenas para usuários com onboarding concluído."""
     user = await get_request_user(request)
-    uid = user["id"] if user else None
 
+    # Sem usuário autenticado: retorna zeros (sem seed data)
+    if not user or not user.get("onboarding_completed"):
+        return {"summary": {}, "metrics": {}, "empty": True}
+
+    uid = user["id"]
     summary = await db_manager.get_financial_summary(month, user_id=uid)
-    total_income = summary["total_income"]
-    debts = summary["debts_total"]
-
-    # Progresso dinâmico de renda livre em relação às dívidas
+    total_income = summary.get("total_income", 0)
+    debts = summary.get("debts_total", 0)
     free_pct = max(0.0, min(100.0, round(((total_income - debts) / total_income) * 100, 1))) if total_income > 0 else 0.0
 
     return {
         "summary": summary,
         "metrics": {
-            "fixed_ratio_pct": round((summary["fixed_costs"] / total_income) * 100, 1) if total_income > 0 else 0.0,
+            "fixed_ratio_pct": round((summary.get("fixed_costs", 0) / total_income) * 100, 1) if total_income > 0 else 0.0,
             "debt_ratio_pct": round((debts / total_income) * 100, 1) if total_income > 0 else 0.0,
-            "surplus_ratio_pct": round((summary["net_surplus"] / total_income) * 100, 1) if total_income > 0 else 0.0,
-            "vr_benefit": 500.00,
-            "liberty_horizon_month": "Abril 2027",
-            "months_to_liberty": 7,
+            "surplus_ratio_pct": round((summary.get("net_surplus", 0) / total_income) * 100, 1) if total_income > 0 else 0.0,
             "gauge_progress_pct": free_pct,
-            "user_display_name": user["name"] if user else db_manager.get_display_name()
+            "user_display_name": user.get("name", "Usuário")
         }
     }
 

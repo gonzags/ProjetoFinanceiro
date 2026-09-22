@@ -1097,11 +1097,30 @@ function initTimelineChartReal(data) {
 // =============================================================================
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+
+  const onboarded = typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isReturning;
+
+  if (!onboarded) {
+    // Usuário ainda não fez onboarding — mostrar estado vazio em tudo
+    initMethodologyDonut();  // gráfico vazio (sem dados, não chama API)
+    const emptyMsg = '<div style="text-align:center; color:var(--lh-text-muted); font-size:0.85rem; padding:24px;">Complete o cadastro para ver seus dados aqui.</div>';
+    ['expenseListContainer','incomeListContainer','goalPanel','portfolioPanel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = emptyMsg;
+    });
+    ['kpiIncome','kpiFixed','kpiDebts','kpiSurplus'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    return;  // 🚫 nada mais carrega — sem seed data
+  }
+
+  // Usuário autenticado com onboarding completo
   initMethodologyDonut();
   loadCategories();
-  loadBudgetMonth();   // carrega KPIs + despesas + receitas do mês atual
+  loadBudgetMonth();   // KPIs + despesas + receitas do mês
   loadTimeline();      // gráfico de fluxo de caixa
-  loadKPIs();          // KPIs legados (consenso, etc.)
+  loadKPIs();          // KPIs legados (consenso)
   loadConsensus();     // hub de decisão IA
   loadGoal();          // objetivo principal
   loadPortfolio();     // carteira ativa
