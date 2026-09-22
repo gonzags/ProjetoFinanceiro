@@ -229,71 +229,92 @@
           <label class="lh-form-label" for="obInvests" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
             Você já investe ou tem interesse em investir? *
           </label>
-          <select id="obInvests" class="lh-form-input" style="cursor: pointer;">
+          <select id="obInvests" class="lh-form-input" style="cursor: pointer;" onchange="toggleInvestmentFields()">
             <option value="ja_investe">Sim, já invisto regularmente</option>
-            <option value="quer_comecar">Não invisto, mas quero começar agora</option>
-            <option value="nao_investe">No momento meu foco é organizar as contas</option>
+            <option value="quer_comecar">Não invisto, mas quero começar</option>
+            <option value="nao_investe">Não — meu foco agora é organizar as contas</option>
             <option value="experiente">Investidor experiente</option>
           </select>
         </div>
 
-        <div class="lh-form-group" style="margin-bottom: 14px;">
-          <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Classes de ativos de interesse:
-          </label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="obAssetType" value="renda_fixa" checked> Renda Fixa / Tesouro
+        <!-- Seção de investimentos — oculta quando "nao_investe" -->
+        <div id="obInvestmentFields" style="margin-bottom: 14px;">
+          <div class="lh-form-group" style="margin-bottom: 14px;">
+            <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--lh-text-muted);">
+              Classes de ativos de seu interesse:
             </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="obAssetType" value="fiis"> FIIs (Fundos Imobiliários)
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 10px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="checkbox" name="obAssetType" value="renda_fixa"
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer; flex-shrink: 0;">
+                <span>Renda Fixa / Tesouro</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 10px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="checkbox" name="obAssetType" value="acoes"
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer; flex-shrink: 0;">
+                <span>Ações e FIIs</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 10px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="checkbox" name="obAssetType" value="cripto"
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer; flex-shrink: 0;">
+                <span>Criptoativos</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 10px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="checkbox" name="obAssetType" value="negocio"
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer; flex-shrink: 0;">
+                <span>Negócio Próprio</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="lh-form-group" style="margin-bottom: 20px;">
+            <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--lh-text-muted);">
+              Perfil de Tolerância a Risco:
             </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="obAssetType" value="acoes"> Ações
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="obAssetType" value="cripto"> Criptoativos
-            </label>
+            <div style="display: flex; gap: 12px; font-size: 0.85rem; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="radio" name="obRiskTolerance" value="conservador"
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer;">
+                Conservador
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="radio" name="obRiskTolerance" value="moderado" checked
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer;">
+                Moderado
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 14px; border: 1px solid var(--lh-border); border-radius: 6px;">
+                <input type="radio" name="obRiskTolerance" value="arrojado"
+                       style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer;">
+                Arrojado
+              </label>
+            </div>
           </div>
         </div>
 
-        <div class="lh-form-group" style="margin-bottom: 20px;">
-          <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Perfil de Tolerância a Risco:
-          </label>
-          <div style="display: flex; gap: 16px; font-size: 0.85rem;">
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="obRiskTolerance" value="conservador"> Conservador
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="obRiskTolerance" value="moderado" checked> Moderado
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="radio" name="obRiskTolerance" value="arrojado"> Arrojado
-            </label>
-          </div>
+        <!-- Mensagem quando não investe -->
+        <div id="obNoInvestMsg" style="display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 0.82rem; color: #166534;">
+          ✅ Entendido! A IA vai montar uma estratégia focada em organização financeira e construção de reserva de emergência antes de qualquer investimento.
         </div>
 
         <!-- Consentimento de Dados — OBRIGATÓRIO -->
-        <div style="background: var(--lh-surface-2, rgba(100,116,139,0.08)); border: 1px solid var(--lh-border); border-radius: 8px; padding: 14px;">
+        <div style="background: rgba(100,116,139,0.08); border: 1px solid var(--lh-border); border-radius: 8px; padding: 14px;">
           <p style="font-size: 0.8rem; font-weight: 700; color: var(--lh-text); margin: 0 0 8px;">
             🔒 Aviso sobre Privacidade e Uso de Dados
           </p>
           <p style="font-size: 0.78rem; color: var(--lh-text-muted); margin: 0 0 10px; line-height: 1.5;">
             Para gerar recomendações personalizadas, seus dados financeiros (renda, gastos, objetivos e perfil de risco)
-            são enviados para análise por modelos de inteligência artificial de terceiros:
+            são enviados para análise por modelos de IA de terceiros:
             <strong>Groq (Llama 3.3)</strong>, <strong>Google Gemini</strong>, <strong>Mistral AI</strong>,
-            <strong>OpenRouter</strong> e <strong>Cloudflare Workers AI</strong>.
-            <br><br>
-            <strong>Nenhum dado de identificação pessoal</strong> (nome, e-mail, CPF) é incluído nas consultas às IAs.
+            <strong>OpenRouter</strong> e <strong>Cloudflare Workers AI</strong>.<br><br>
+            <strong>Nenhum dado de identificação pessoal</strong> (nome, e-mail) é incluído nas consultas às IAs.
             Apenas dados financeiros agregados são compartilhados.
           </p>
-          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 0.82rem; color: var(--lh-text);">
+          <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.82rem; color: var(--lh-text);">
             <input type="checkbox" id="obDataConsent" name="data_consent" value="true"
-                   style="margin-top: 2px; flex-shrink: 0;" required>
+                   style="width: 16px; height: 16px; accent-color: #1E56A0; cursor: pointer; flex-shrink: 0; margin-top: 2px;" required>
             <span>
-              Li e concordo com o envio dos meus dados financeiros para os modelos de IA listados acima, 
-              exclusivamente para fins de análise e recomendação personalizada. *
+              Li e concordo com o envio dos meus dados financeiros para os modelos de IA listados acima,
+              exclusivamente para fins de análise e recomendação personalizada. <strong>*</strong>
             </span>
           </label>
         </div>
@@ -312,12 +333,14 @@
             Salvar rascunho
           </button>
 
-          <button type="button" id="btnObNext" class="lh-btn lh-btn-primary" onclick="onboardingNextStep()">
+          <button type="button" id="btnObNext" onclick="onboardingNextStep()"
+                  style="padding: 10px 20px; background: #1E56A0; color: #fff; border: none; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer;">
             Próximo →
           </button>
 
-          <button type="button" id="btnObSubmit" class="lh-btn lh-btn-primary" onclick="submitOnboardingFinal()" style="display: none; background-color: var(--lh-primary);">
-            Concluir e Analisar com IA ✓
+          <button type="button" id="btnObSubmit" onclick="submitOnboardingFinal()"
+                  style="display: none; padding: 10px 20px; background: #166534; color: #fff; border: none; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer;">
+            ✓ Concluir e Analisar com IA
           </button>
         </div>
       </div>
@@ -440,5 +463,14 @@ function updateGoalFields() {
   const type = document.getElementById('obGoalType').value;
   const titleGroup = document.getElementById('obGoalTitleGroup');
   if (titleGroup) titleGroup.style.display = type === 'outro' ? 'block' : 'none';
+}
+
+function toggleInvestmentFields() {
+  const val = document.getElementById('obInvests')?.value;
+  const fields  = document.getElementById('obInvestmentFields');
+  const noInvest = document.getElementById('obNoInvestMsg');
+  const hideInvestment = val === 'nao_investe';
+  if (fields)    fields.style.display    = hideInvestment ? 'none' : 'block';
+  if (noInvest)  noInvest.style.display  = hideInvestment ? 'block' : 'none';
 }
 </script>
