@@ -51,14 +51,49 @@
     .lh-modal-backdrop { display: block !important; position: static !important; background: none !important; backdrop-filter: none !important; padding: 0 !important; }
     .lh-modal { max-width: none !important; width: 100% !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; border: none !important; outline: none !important; }
 
-    /* Inputs e selects ficam legíveis no fundo escuro */
+    /* Inputs e selects no tema escuro com alto contraste */
     input, select, textarea {
-      background: rgba(255,255,255,0.06) !important;
-      color: var(--lh-text, #e2e8f0) !important;
-      border-color: rgba(255,255,255,0.12) !important;
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border: 1px solid #334155 !important;
     }
     input::placeholder { color: #64748b !important; }
     label { color: var(--lh-text-muted, #94a3b8) !important; }
+
+    /* Dropdowns e opções com contraste estrito e fundo sólido */
+    select {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+    }
+    select option {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      padding: 10px 12px;
+    }
+    select option:hover,
+    select option:checked {
+      background-color: #1e56a0 !important;
+      color: #ffffff !important;
+    }
+
+    /* Foco e autofill sem esbranquiçamento */
+    input:focus, select:focus, textarea:focus {
+      background-color: #1e293b !important;
+      color: #ffffff !important;
+      border-color: #3b82f6 !important;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4) !important;
+    }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    select:-webkit-autofill {
+      -webkit-text-fill-color: #f8fafc !important;
+      -webkit-box-shadow: 0 0 0px 1000px #1e293b inset !important;
+      box-shadow: 0 0 0px 1000px #1e293b inset !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
 
     /* Botões */
     #btnObNext  { background: #1E56A0 !important; color: #fff !important; border: none !important; }

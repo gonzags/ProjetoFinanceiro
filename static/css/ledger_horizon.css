@@ -603,6 +603,29 @@ body {
   border-color: var(--lh-cobalt);
 }
 
+/* Contraste estrito para caixas de seleção e dropdowns */
+select.lh-form-input, select {
+  background-color: var(--lh-panel-alt);
+  color: var(--lh-ink-main);
+}
+
+select.lh-form-input option, select option {
+  background-color: var(--lh-panel, #151B22);
+  color: var(--lh-ink-main, #F0F4F8);
+  padding: 8px 12px;
+}
+
+/* Suporte de alto contraste a autofill em tema escuro */
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover, 
+[data-theme="dark"] input:-webkit-autofill:focus,
+[data-theme="dark"] select:-webkit-autofill {
+  -webkit-text-fill-color: #F0F4F8 !important;
+  -webkit-box-shadow: 0 0 0px 1000px #1C242E inset !important;
+  box-shadow: 0 0 0px 1000px #1C242E inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 /* Utilitários */
 .text-green { color: var(--lh-green); }
 .text-amber { color: var(--lh-amber-ink); }

@@ -64,6 +64,12 @@ function updateOnboardingUI() {
   if (btnPrev)   btnPrev.style.display   = currentOnboardingStep > 1 ? "inline-block" : "none";
   if (btnNext)   btnNext.style.display   = currentOnboardingStep < total ? "inline-block" : "none";
   if (btnSubmit) btnSubmit.style.display = currentOnboardingStep === total ? "inline-block" : "none";
+
+  // Recalcular totais para manter reatividade consistente ao navegar
+  if (typeof updateIncomeTotal === 'function') updateIncomeTotal();
+  if (typeof updateDebtsTotal === 'function') updateDebtsTotal();
+  if (typeof updateExpensesTotal === 'function') updateExpensesTotal();
+  if (typeof updateVarTotal === 'function') updateVarTotal();
 }
 
 function validateCurrentStep() {
