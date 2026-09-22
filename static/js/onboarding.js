@@ -356,13 +356,43 @@ function goalTypeDefaultTitle(type) {
 async function submitOnboardingFinal() {
   if (!validateCurrentStep()) return;
   const data = collectOnboardingData();
-  const btnSubmit = document.getElementById("btnObSubmit");
-  if (btnSubmit) {
-    btnSubmit.disabled = true;
-    btnSubmit.textContent = "Processando perfil e consenso com IA...";
-  }
 
-  showOnboardingFeedback("Gravando perfil e acionando comitê de inteligência artificial...", "info");
+  const wizardHeader = document.getElementById("onboardingWizardHeader");
+  const formEl = document.getElementById("onboardingForm");
+  const procScreen = document.getElementById("onboardingProcessingScreen");
+  const stageText = document.getElementById("obProcStageText");
+  const progressBar = document.getElementById("obProcProgressBar");
+  const percentText = document.getElementById("obProcPercentText");
+
+  // Transição visual imediata para a tela de carregamento dedicada
+  if (wizardHeader) wizardHeader.style.display = "none";
+  if (formEl) formEl.style.display = "none";
+  hideOnboardingFeedback();
+  if (procScreen) procScreen.style.display = "block";
+
+  let currentPct = 8;
+  const stages = [
+    { at: 10, text: "Salvando suas informações financeiras..." },
+    { at: 35, text: "Mapeando fontes de renda, cartões e patrimônio..." },
+    { at: 65, text: "Consultando comitê de inteligência artificial..." },
+    { at: 85, text: "Consolidando alocações e metas orçamentárias..." }
+  ];
+
+  if (progressBar) progressBar.style.width = `${currentPct}%`;
+  if (percentText) percentText.textContent = `${currentPct}% concluído`;
+  if (stageText) stageText.textContent = stages[0].text;
+
+  const timer = setInterval(() => {
+    if (currentPct < 90) {
+      currentPct += Math.floor(Math.random() * 6) + 4;
+      if (currentPct > 90) currentPct = 90;
+      if (progressBar) progressBar.style.width = `${currentPct}%`;
+      if (percentText) percentText.textContent = `${currentPct}% concluído`;
+
+      const matched = stages.slice().reverse().find(s => currentPct >= s.at);
+      if (matched && stageText) stageText.textContent = matched.text;
+    }
+  }, 350);
 
   try {
     const res = await fetch("/api/onboarding", {
@@ -376,13 +406,30 @@ async function submitOnboardingFinal() {
       throw new Error(err.detail || "Erro ao concluir onboarding.");
     }
 
-    showOnboardingFeedback("Perfil configurado com sucesso! Carregando seu dashboard...", "success");
+    // Iniciar cálculo em segundo plano para agilizar o dashboard
+    fetch("/api/consensus?month=Outubro").catch(() => {});
+
+    clearInterval(timer);
+    if (progressBar) progressBar.style.width = "100%";
+    if (percentText) percentText.textContent = "100% concluído";
+    if (stageText) {
+      stageText.innerHTML = '<span style="color:#22c55e;font-weight:600;">✓ Perfil configurado com sucesso! Abrindo seu painel...</span>';
+    }
+
     document.dispatchEvent(new CustomEvent('onboardingComplete'));
+
     setTimeout(() => {
       window.location.href = "/";
-    }, 1200);
+    }, 900);
+
   } catch (err) {
+    clearInterval(timer);
+    if (procScreen) procScreen.style.display = "none";
+    if (wizardHeader) wizardHeader.style.display = "block";
+    if (formEl) formEl.style.display = "block";
+
     showOnboardingFeedback(err.message, "error");
+    const btnSubmit = document.getElementById("btnObSubmit");
     if (btnSubmit) {
       btnSubmit.disabled = false;
       btnSubmit.textContent = "Concluir e Analisar com IA";

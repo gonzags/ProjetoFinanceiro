@@ -128,7 +128,7 @@ class BaseOpenAICompatibleProvider:
         model: str,
         circuit_breaker: CircuitBreaker,
         timeout: float = 12.0,
-        max_tokens: int = 500,
+        max_tokens: int = 1200,
         temperature: float = 0.2
     ):
         self.provider_id = provider_id
@@ -190,7 +190,8 @@ class BaseOpenAICompatibleProvider:
         for attempt in range(2):
             start_time = time.time()
             try:
-                async with httpx.AsyncClient(timeout=effective_timeout) as client:
+                verify_ssl = os.getenv("HTTPX_VERIFY", "True").lower() not in ("false", "0")
+                async with httpx.AsyncClient(timeout=effective_timeout, verify=verify_ssl) as client:
                     resp = await client.post(url, headers=headers, json=payload)
                     latency = (time.time() - start_time) * 1000.0
 
@@ -207,10 +208,30 @@ class BaseOpenAICompatibleProvider:
                     data = resp.json()
                     content = data["choices"][0]["message"]["content"]
                     
+                    # Limpeza de markdown caso o modelo tenha envolvido em ```json ... ```
+                    content_clean = content.strip()
+                    if content_clean.startswith("```"):
+                        lines = content_clean.splitlines()
+                        if lines and lines[0].startswith("```"):
+                            lines = lines[1:]
+                        if lines and lines[-1].startswith("```"):
+                            lines = lines[:-1]
+                        content_clean = "\n".join(lines).strip()
+
                     # Parsing e Validação Pydantic
-                    parsed = json.loads(content)
-                    alloc_raw = parsed["allocation"]
+                    parsed = json.loads(content_clean)
+                    alloc_raw = parsed.get("allocation", {})
                     
+                    # Mapear chaves em inglês/variações para o padrão em português
+                    if "needs" in alloc_raw and "necessidades" not in alloc_raw:
+                        alloc_raw["necessidades"] = alloc_raw.pop("needs")
+                    if "wants" in alloc_raw and "desejos" not in alloc_raw:
+                        alloc_raw["desejos"] = alloc_raw.pop("wants")
+                    if "future" in alloc_raw and "futuro" not in alloc_raw:
+                        alloc_raw["futuro"] = alloc_raw.pop("future")
+                    if "savings" in alloc_raw and "futuro" not in alloc_raw:
+                        alloc_raw["futuro"] = alloc_raw.pop("savings")
+
                     # Normalização de percentual se veio em decimal (ex: 0.5 em vez de 50)
                     if (alloc_raw.get("necessidades", 0) <= 1.0 and 
                         alloc_raw.get("desejos", 0) <= 1.0 and 
@@ -218,13 +239,39 @@ class BaseOpenAICompatibleProvider:
                         alloc_raw = {k: v * 100.0 for k, v in alloc_raw.items()}
 
                     validated_alloc = AgentAllocation(**alloc_raw)
+
+                    # Sanitização de risk_flags (garantir List[str])
+                    raw_flags = parsed.get("risk_flags", [])
+                    risk_flags: List[str] = []
+                    if isinstance(raw_flags, list):
+                        for f in raw_flags:
+                            if isinstance(f, dict):
+                                flag_str = f.get("flag") or f.get("detalhes") or (list(f.values())[0] if f else "")
+                                risk_flags.append(str(flag_str))
+                            else:
+                                risk_flags.append(str(f))
+                    elif isinstance(raw_flags, str):
+                        risk_flags = [raw_flags]
+
+                    # Sanitização de reasoning_summary (garantir str <= 350)
+                    raw_reasoning = parsed.get("reasoning_summary", "")
+                    if isinstance(raw_reasoning, dict):
+                        parts = []
+                        for k, v in raw_reasoning.items():
+                            if isinstance(v, str):
+                                parts.append(v)
+                            elif isinstance(v, dict):
+                                parts.extend(str(sv) for sv in v.values() if isinstance(sv, str))
+                        raw_reasoning = " ".join(parts) or json.dumps(raw_reasoning, ensure_ascii=False)
+                    reasoning_summary = str(raw_reasoning).strip()[:350]
+
                     validated_resp = LLMResponse(
                         provider_id=self.provider_id,
                         provider_name=self.name,
                         allocation=validated_alloc,
                         confidence_score=float(parsed.get("confidence_score", 0.75)),
-                        risk_flags=list(parsed.get("risk_flags", [])),
-                        reasoning_summary=str(parsed.get("reasoning_summary", ""))[:300],
+                        risk_flags=risk_flags,
+                        reasoning_summary=reasoning_summary or "Análise orçamentária estruturada.",
                         latency_ms=round(latency, 1)
                     )
 

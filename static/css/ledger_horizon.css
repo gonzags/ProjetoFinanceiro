@@ -630,3 +630,18 @@ select.lh-form-input option, select option {
 .text-green { color: var(--lh-green); }
 .text-amber { color: var(--lh-amber-ink); }
 .text-cobalt { color: var(--lh-cobalt); }
+
+@keyframes lh-spin {
+  to { transform: rotate(360deg); }
+}
+
+.lh-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #38bdf8;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: lh-spin 0.75s linear infinite;
+  vertical-align: middle;
+}

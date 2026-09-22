@@ -1,3 +1,14 @@
+# ==============================================================================
+# docker-compose.yml — Ledger Horizon (Produção Debian 12)
+#
+# Arquitetura do servidor:
+#   - Apenas o serviço "app" é gerenciado aqui.
+#   - O Postgres já roda no servidor na rede "server_default" com o nome
+#     de container "postgres_db" (provisionado separadamente).
+#   - A porta 8300 é exposta externamente (proxy reverso do Debian aponta aqui).
+#   - Credenciais vêm exclusivamente do arquivo .env (nunca hardcoded aqui).
+# ==============================================================================
+
 services:
   app:
     build:
@@ -6,39 +17,12 @@ services:
     container_name: ledger_horizon_app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8300:8000"
     env_file:
       - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
-      - ledger_network
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: ledger_horizon_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ledger_horizon}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_password}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ledger_horizon"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - ledger_network
+      - server_default
 
 networks:
-  ledger_network:
-    driver: bridge
-
-volumes:
-  postgres_data:
-    driver: local
+  server_default:
+    external: true

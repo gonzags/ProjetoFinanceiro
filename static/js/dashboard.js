@@ -297,14 +297,86 @@ async function loadKPIs() {
   }
 }
 
+let aiProgressInterval = null;
+
+function startAiLoadingIndicator(customMessage) {
+  const banner = document.getElementById('aiLoadingBanner');
+  const stageEl = document.getElementById('aiLoadingStage');
+  const pctEl = document.getElementById('aiLoadingPct');
+  const barEl = document.getElementById('aiLoadingBar');
+  const timestamp = document.getElementById('analysisTimestamp');
+  
+  if (!banner) return;
+  banner.style.display = 'block';
+  
+  if (timestamp) timestamp.textContent = 'Processando comitê de inteligência artificial...';
+
+  let pct = 8;
+  const stages = [
+    { at: 10, text: customMessage || 'Estruturando dados de receitas e custos fixos...' },
+    { at: 35, text: 'Consultando comitê de inteligência artificial...' },
+    { at: 65, text: 'Auditando riscos e analisando metas orçamentárias...' },
+    { at: 85, text: 'Consolidando parecer e alocação recomendada...' }
+  ];
+
+  if (stageEl) stageEl.textContent = stages[0].text;
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (barEl) barEl.style.width = `${pct}%`;
+
+  if (aiProgressInterval) clearInterval(aiProgressInterval);
+
+  aiProgressInterval = setInterval(() => {
+    if (pct < 92) {
+      pct += Math.floor(Math.random() * 5) + 3;
+      if (pct > 92) pct = 92;
+      if (pctEl) pctEl.textContent = `${pct}%`;
+      if (barEl) barEl.style.width = `${pct}%`;
+
+      const matchedStage = stages.slice().reverse().find(s => pct >= s.at);
+      if (matchedStage && stageEl) {
+        stageEl.textContent = matchedStage.text;
+      }
+    }
+  }, 450);
+}
+
+function stopAiLoadingIndicator(success = true) {
+  if (aiProgressInterval) {
+    clearInterval(aiProgressInterval);
+    aiProgressInterval = null;
+  }
+  const banner = document.getElementById('aiLoadingBanner');
+  const stageEl = document.getElementById('aiLoadingStage');
+  const pctEl = document.getElementById('aiLoadingPct');
+  const barEl = document.getElementById('aiLoadingBar');
+  const timestamp = document.getElementById('analysisTimestamp');
+
+  if (!banner) return;
+
+  if (success) {
+    if (pctEl) pctEl.textContent = '100%';
+    if (barEl) barEl.style.width = '100%';
+    if (stageEl) stageEl.textContent = '✓ Análise concluída com sucesso!';
+    if (timestamp) timestamp.textContent = 'Análise do comitê de IA consolidada.';
+    setTimeout(() => {
+      banner.style.display = 'none';
+    }, 500);
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 async function loadConsensus() {
+  startAiLoadingIndicator('Carregando parecer do comitê de inteligência artificial...');
   try {
     const res = await fetch('/api/consensus?month=Outubro');
     if (!res.ok) throw new Error('Falha ao carregar consenso');
     const data = await res.json();
+    stopAiLoadingIndicator(true);
     renderConsensus(data);
   } catch (e) {
     console.error('Erro no consenso:', e);
+    stopAiLoadingIndicator(false);
   }
 }
 
@@ -383,25 +455,32 @@ async function recalculateConsensus() {
   const btnText = document.getElementById('recalculateBtnText');
   const rateNotice = document.getElementById('rateLimitNotice');
 
-  btn.disabled = true;
-  btnText.textContent = 'Deliberando...';
-  rateNotice.style.display = 'none';
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = 'Deliberando...';
+  if (rateNotice) rateNotice.style.display = 'none';
+
+  startAiLoadingIndicator('Acionando nova rodada de deliberação com IA...');
 
   try {
     const res = await fetch('/api/consensus/recalculate?month=Outubro', { method: 'POST' });
     if (res.status === 429) {
-      rateNotice.style.display = 'block';
-      rateNotice.textContent = 'Limite atingido: máximo de 3 recálculos por hora por IP.';
+      stopAiLoadingIndicator(false);
+      if (rateNotice) {
+        rateNotice.style.display = 'block';
+        rateNotice.textContent = 'Limite atingido: máximo de 3 recálculos por hora por IP.';
+      }
       return;
     }
     if (!res.ok) throw new Error('Erro ao recalcular');
     const data = await res.json();
+    stopAiLoadingIndicator(true);
     renderConsensus(data);
   } catch (e) {
     console.error('Erro no recálculo:', e);
+    stopAiLoadingIndicator(false);
   } finally {
-    btn.disabled = false;
-    btnText.textContent = 'Recalcular Decisões';
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = '↻ Atualizar análise';
   }
 }
 

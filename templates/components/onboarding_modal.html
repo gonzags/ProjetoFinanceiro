@@ -3,7 +3,7 @@
   <div class="lh-modal" style="max-width: 620px; width: 95%; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); max-height: 90vh; overflow-y: auto;">
 
     <!-- Header do Wizard -->
-    <div style="margin-bottom: 20px;">
+    <div id="onboardingWizardHeader" style="margin-bottom: 20px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span class="lh-badge lh-badge-amber" id="onboardingStepBadge" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
           Passo 1 de 6
@@ -575,6 +575,23 @@
       </div>
 
     </form>
+
+    <!-- Tela de Processamento e Análise da IA ao Vivo -->
+    <div id="onboardingProcessingScreen" style="display: none; text-align: center; padding: 40px 16px;">
+      <div style="font-size: 2.5rem; margin-bottom: 20px;">
+        <span class="lh-spinner" style="width: 40px; height: 40px; border-width: 3px;"></span>
+      </div>
+      <h3 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin: 0 0 8px;">Processando seu Perfil Financeiro</h3>
+      <p id="obProcStageText" style="font-size: 0.88rem; color: #94a3b8; margin: 0 0 24px; min-height: 20px;">
+        Salvando informações e consultando os modelos de inteligência artificial...
+      </p>
+
+      <!-- Barra de Progresso com Porcentagem ao Vivo -->
+      <div style="max-width: 440px; margin: 0 auto 12px; height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden;">
+        <div id="obProcProgressBar" style="width: 5%; height: 100%; background: linear-gradient(90deg, #3b82f6, #06b6d4); border-radius: 999px; transition: width 0.35s ease;"></div>
+      </div>
+      <div id="obProcPercentText" style="font-size: 0.95rem; font-weight: 800; color: #38bdf8; letter-spacing: -0.2px;">5% concluído</div>
+    </div>
   </div>
 </div>
 
