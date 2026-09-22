@@ -1,0 +1,137 @@
+<!-- Modal de Perfil do Usuário -->
+<div id="profileModal" class="lh-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle" style="display:none;">
+  <div class="lh-modal" style="max-width:620px; width:95%; max-height:92vh; overflow-y:auto; padding:0;">
+
+    <!-- Header do Modal -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:20px 24px 16px; border-bottom:1px solid var(--lh-border);">
+      <h2 id="profileModalTitle" style="font-size:1.1rem; font-weight:700; color:var(--lh-text); margin:0;">
+        Meu Perfil
+      </h2>
+      <button type="button" onclick="closeProfileModal()" aria-label="Fechar" style="background:none; border:none; color:var(--lh-text-muted); font-size:1.2rem; cursor:pointer; padding:4px 8px; line-height:1;">✕</button>
+    </div>
+
+    <!-- Seção Hero: Avatar + Info -->
+    <div style="padding:24px; display:flex; align-items:center; gap:20px; border-bottom:1px solid var(--lh-border);">
+      <!-- Avatar -->
+      <div style="position:relative; flex-shrink:0;">
+        <div id="profileAvatarWrap" style="width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg,#1E56A0,#06b6d4); display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:800; color:#fff; overflow:hidden; cursor:pointer;" onclick="document.getElementById('avatarFileInput').click()" title="Clique para trocar a foto">
+          <img id="profileAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover;">
+          <span id="profileAvatarInitials">?</span>
+        </div>
+        <div style="position:absolute; bottom:0; right:0; width:24px; height:24px; background:#1E56A0; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; border:2px solid var(--lh-panel);" onclick="document.getElementById('avatarFileInput').click()" title="Trocar foto">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="uploadAvatar(this.files[0])">
+      </div>
+
+      <!-- Info Principal -->
+      <div style="flex:1; min-width:0;">
+        <div id="profileHeroName" style="font-size:1.3rem; font-weight:800; color:var(--lh-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">—</div>
+        <div id="profileHeroEmail" style="font-size:0.82rem; color:var(--lh-text-muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">—</div>
+        <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center;">
+          <span id="profileUserTypeBadge" class="lh-badge" style="font-size:0.72rem; font-weight:700; text-transform:uppercase;">PF</span>
+          <span id="profileMemberSince" style="font-size:0.75rem; color:var(--lh-text-muted);">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex; gap:0; border-bottom:1px solid var(--lh-border); overflow-x:auto;">
+      <button class="profile-tab active" onclick="switchProfileTab('pessoal')" id="tab-pessoal" style="padding:10px 18px; font-size:0.82rem; font-weight:600; background:none; border:none; border-bottom:2px solid #1E56A0; color:var(--lh-text); cursor:pointer; white-space:nowrap;">Dados Pessoais</button>
+      <button class="profile-tab" onclick="switchProfileTab('financeiro')" id="tab-financeiro" style="padding:10px 18px; font-size:0.82rem; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--lh-text-muted); cursor:pointer; white-space:nowrap;">Financeiro</button>
+      <button class="profile-tab" onclick="switchProfileTab('cartoes')" id="tab-cartoes" style="padding:10px 18px; font-size:0.82rem; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--lh-text-muted); cursor:pointer; white-space:nowrap;">Cartões</button>
+      <button class="profile-tab" onclick="switchProfileTab('objetivo')" id="tab-objetivo" style="padding:10px 18px; font-size:0.82rem; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--lh-text-muted); cursor:pointer; white-space:nowrap;">Objetivo</button>
+    </div>
+
+    <!-- Conteúdo das Tabs -->
+    <div style="padding:20px 24px;">
+
+      <!-- Tab: Dados Pessoais -->
+      <div id="profileTab-pessoal" class="profile-tab-content">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Nome completo</div>
+            <div id="pf-name" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Idade</div>
+            <div id="pf-age" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Profissão</div>
+            <div id="pf-occupation" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Estado civil</div>
+            <div id="pf-marital" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Dependentes</div>
+            <div id="pf-dependents" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">E-mail</div>
+            <div id="pf-email" style="font-size:0.9rem; color:var(--lh-text); font-weight:500; word-break:break-all;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Financeiro -->
+      <div id="profileTab-financeiro" class="profile-tab-content" style="display:none;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Renda mensal</div>
+            <div id="pf-income" style="font-size:1.1rem; color:var(--lh-text); font-weight:700;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Perfil de risco</div>
+            <div id="pf-risk" style="font-size:0.9rem; color:var(--lh-text); font-weight:500; text-transform:capitalize;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Investe?</div>
+            <div id="pf-invests" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px;">Tipo de investimento</div>
+            <div id="pf-inv-types" style="font-size:0.9rem; color:var(--lh-text); font-weight:500;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Cartões -->
+      <div id="profileTab-cartoes" class="profile-tab-content" style="display:none;">
+        <div id="profileCardsList" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="text-align:center; color:var(--lh-text-muted); font-size:0.85rem; padding:20px;">Carregando cartões...</div>
+        </div>
+      </div>
+
+      <!-- Tab: Objetivo -->
+      <div id="profileTab-objetivo" class="profile-tab-content" style="display:none;">
+        <div id="profileGoalContent">
+          <div style="text-align:center; color:var(--lh-text-muted); font-size:0.85rem; padding:20px;">Carregando objetivo...</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--lh-border); gap:8px; flex-wrap:wrap;">
+      <a href="/onboarding" style="padding:8px 16px; background:none; border:1px solid var(--lh-border); border-radius:6px; font-size:0.85rem; font-weight:600; color:var(--lh-text); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+        ✏️ Editar Perfil
+      </a>
+      <form action="/logout" method="POST" style="margin:0;">
+        <button type="submit" style="padding:8px 16px; background:#ef4444; color:#fff; border:none; border-radius:6px; font-size:0.85rem; font-weight:600; cursor:pointer;">
+          Sair da conta
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.profile-tab-content { animation: lh-fadein 0.18s ease; }
+@keyframes lh-fadein { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+.profile-tab.active { color: var(--lh-text) !important; border-bottom-color: #1E56A0 !important; }
+.profile-tab:not(.active):hover { color: var(--lh-text) !important; background: var(--lh-surface-2, rgba(100,116,139,.06)); }
+</style>

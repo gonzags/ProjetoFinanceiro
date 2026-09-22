@@ -580,134 +580,174 @@ async function switchMethodology(methodology, btnElement) {
 }
 
 // -----------------------------------------------------------------------------
-// Modal do Questionário com Focus Trap e Esc Key
-// -----------------------------------------------------------------------------
-function updateFixedTotalPreview() {
-  const ac = parseFloat(document.getElementById('inputFixedAcademia')?.value) || 0;
-  const nr = parseFloat(document.getElementById('inputFixedNetRes')?.value) || 0;
-  const nm = parseFloat(document.getElementById('inputFixedNetMov')?.value) || 0;
-  const sp = parseFloat(document.getElementById('inputFixedSpotify')?.value) || 0;
-  const gg = parseFloat(document.getElementById('inputFixedGoogle')?.value) || 0;
-  const total = ac + nr + nm + sp + gg;
-  const lbl = document.getElementById('labelFixedTotal');
-  if (lbl) lbl.textContent = `Total: ${formatCurrency(total)}`;
-}
 
-function handleModalKeyDown(e) {
-  const modal = document.getElementById('questionnaireModal');
-  if (!modal || !modal.classList.contains('open')) return;
 
-  if (e.key === 'Escape') {
-    toggleQuestionnaireModal(false);
-    return;
-  }
+// =============================================================================
+// Modal de Perfil do Usuário
+// =============================================================================
 
-  // Focus trap
-  if (e.key === 'Tab') {
-    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    if (focusable.length === 0) return;
-    const firstElement = focusable[0];
-    const lastElement = focusable[focusable.length - 1];
-
-    if (e.shiftKey) {
-      if (document.activeElement === firstElement) {
-        lastElement.focus();
-        e.preventDefault();
-      }
-    } else {
-      if (document.activeElement === lastElement) {
-        firstElement.focus();
-        e.preventDefault();
-      }
-    }
-  }
-}
-
-function toggleQuestionnaireModal(show) {
-  const modal = document.getElementById('questionnaireModal');
+function openProfileModal() {
+  const modal = document.getElementById('profileModal');
   if (!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  loadProfileData();
+}
 
-  if (show) {
-    lastActiveElement = document.activeElement;
-    modal.classList.add('open');
-    document.addEventListener('keydown', handleModalKeyDown);
-    updateFixedTotalPreview();
+function closeProfileModal() {
+  const modal = document.getElementById('profileModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
 
-    // Foca o primeiro input acessível
-    setTimeout(() => {
-      const firstInput = document.getElementById('inputSalaryNet');
-      if (firstInput) firstInput.focus();
-    }, 50);
-  } else {
-    modal.classList.remove('open');
-    document.removeEventListener('keydown', handleModalKeyDown);
-    if (lastActiveElement && typeof lastActiveElement.focus === 'function') {
-      lastActiveElement.focus();
-    }
+// Fechar ao clicar no backdrop
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('profileModal');
+  if (modal) {
+    modal.addEventListener('click', e => { if (e.target === modal) closeProfileModal(); });
+  }
+});
+
+function switchProfileTab(tab) {
+  document.querySelectorAll('.profile-tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.profile-tab').forEach(btn => {
+    btn.classList.remove('active');
+    btn.style.borderBottomColor = 'transparent';
+    btn.style.color = 'var(--lh-text-muted)';
+  });
+  const content = document.getElementById('profileTab-' + tab);
+  if (content) content.style.display = 'block';
+  const btn = document.getElementById('tab-' + tab);
+  if (btn) {
+    btn.classList.add('active');
+    btn.style.borderBottomColor = '#1E56A0';
+    btn.style.color = 'var(--lh-text)';
   }
 }
 
-async function submitQuestionnaire(event) {
-  event.preventDefault();
-  const salary = parseFloat(document.getElementById('inputSalaryNet').value) || 0;
-  const picpay = parseFloat(document.getElementById('inputPicPay').value) || 0;
-  const nubank = parseFloat(document.getElementById('inputNubank').value) || 0;
-  const special = parseFloat(document.getElementById('inputSpecialEvent').value) || 0;
-  const friendDebt = parseFloat(document.getElementById('inputFriendDebt').value) || 0;
-
-  // Coleta completa dos custos fixos editados
-  const fixedExpenses = [
-    { name: "Academia", amount: parseFloat(document.getElementById('inputFixedAcademia')?.value) || 0, category: "Saúde" },
-    { name: "Internet Residencial", amount: parseFloat(document.getElementById('inputFixedNetRes')?.value) || 0, category: "Conectividade" },
-    { name: "Internet Móvel", amount: parseFloat(document.getElementById('inputFixedNetMov')?.value) || 0, category: "Conectividade" },
-    { name: "Spotify", amount: parseFloat(document.getElementById('inputFixedSpotify')?.value) || 0, category: "Assinaturas" },
-    { name: "Armazenamento Google", amount: parseFloat(document.getElementById('inputFixedGoogle')?.value) || 0, category: "Assinaturas" }
-  ];
-
-  // Coleta completa dos compromissos pontuais (Viagem E Amigo)
-  const oneOffs = [];
-  if (special > 0) {
-    oneOffs.push({ name: "Viagem / Pontual", amount: special, month: "Outubro" });
-  }
-  if (friendDebt > 0) {
-    oneOffs.push({ name: "Quitação amigo", amount: friendDebt, month: "Outubro" });
-  }
-
-  const payload = {
-    salary_net: salary,
-    fixed_expenses: fixedExpenses,
-    card_schedules: {
-      PicPay: { closing_day: 27, installments: { Outubro: picpay } },
-      Nubank: { closing_day: 4, installments: { Outubro: nubank } }
-    },
-    one_off_commitments: oneOffs
-  };
-
-  const saveBtn = document.getElementById('saveQuestionnaireBtn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Atualizando...';
-
+async function loadProfileData() {
   try {
-    const res = await fetch('/api/questionnaire', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('Erro ao salvar');
+    const res = await fetch('/api/profile/me');
+    if (!res.ok) return;
+    const p = await res.json();
 
-    toggleQuestionnaireModal(false);
-    // Recarregar dados da interface de forma coordenada
-    await loadTimeline();
-    await loadKPIs();
-    await loadConsensus();
-  } catch (e) {
-    alert('Erro ao atualizar os dados: ' + e.message);
-  } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Salvar e Atualizar Projeções';
+    // Hero
+    const name = p.name || 'Usuário';
+    const initials = name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    document.getElementById('profileHeroName').textContent = name;
+    document.getElementById('profileHeroEmail').textContent = p.email || '—';
+    document.getElementById('profileAvatarInitials').textContent = initials;
+    document.getElementById('headerAvatarInitials').textContent = initials;
+
+    if (p.avatar_url) {
+      _setAvatarImage(p.avatar_url);
+    }
+
+    const badge = document.getElementById('profileUserTypeBadge');
+    if (badge) badge.textContent = (p.user_type || 'pf').toUpperCase();
+
+    const since = document.getElementById('profileMemberSince');
+    if (since && p.member_since) since.textContent = 'Membro desde ' + p.member_since;
+
+    // Tab Dados Pessoais
+    const maritalMap = { solteiro: 'Solteiro(a)', casado: 'Casado(a)', uniao_estavel: 'União Estável', divorciado: 'Divorciado(a)', viuvo: 'Viúvo(a)' };
+    _setProfileField('pf-name', p.name);
+    _setProfileField('pf-age', p.age ? p.age + ' anos' : null);
+    _setProfileField('pf-occupation', p.occupation);
+    _setProfileField('pf-marital', maritalMap[p.marital_status] || p.marital_status);
+    _setProfileField('pf-dependents', p.dependents != null ? (p.dependents === 0 ? 'Nenhum' : p.dependents + ' dependente(s)') : null);
+    _setProfileField('pf-email', p.email);
+
+    // Tab Financeiro
+    _setProfileField('pf-income', p.monthly_income ? formatCurrency(p.monthly_income) : null);
+    _setProfileField('pf-risk', p.risk_tolerance);
+    const investsMap = { nao_investe: 'Não investe ainda', investe: 'Sim, investe', quer_comecar: 'Quer começar' };
+    _setProfileField('pf-invests', investsMap[p.invests] || p.invests);
+    _setProfileField('pf-inv-types', (p.investment_types || []).join(', ') || 'Nenhum informado');
+
+    // Tab Cartões
+    const cardsList = document.getElementById('profileCardsList');
+    if (cardsList) {
+      if (!p.cards || p.cards.length === 0) {
+        cardsList.innerHTML = '<div style="text-align:center;color:var(--lh-text-muted);font-size:0.85rem;padding:20px;">Nenhum cartão cadastrado.</div>';
+      } else {
+        cardsList.innerHTML = p.cards.map(c => `
+          <div style="background:var(--lh-panel-alt,rgba(100,116,139,.06));border:1px solid var(--lh-border);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div>
+              <div style="font-weight:700;font-size:0.9rem;">${c.name}${c.bank ? ' · ' + c.bank : ''}</div>
+              <div style="font-size:0.78rem;color:var(--lh-text-muted);margin-top:2px;">Fecha dia ${c.closing_day || '—'} · Vence dia ${c.due_day || '—'}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              ${c.credit_limit ? `<div style="font-size:0.78rem;color:var(--lh-text-muted);">Limite: ${formatCurrency(c.credit_limit)}</div>` : ''}
+              ${c.current_balance != null ? `<div style="font-size:0.85rem;font-weight:700;color:#ef4444;">Fatura: ${formatCurrency(c.current_balance)}</div>` : ''}
+            </div>
+          </div>`).join('');
+      }
+    }
+
+    // Tab Objetivo
+    const goalEl = document.getElementById('profileGoalContent');
+    if (goalEl) {
+      if (!p.goal) {
+        goalEl.innerHTML = '<div style="text-align:center;color:var(--lh-text-muted);font-size:0.85rem;padding:20px;">Nenhum objetivo cadastrado.<br><a href="/onboarding" style="color:#1E56A0;font-weight:600;">Cadastrar objetivo</a></div>';
+      } else {
+        const g = p.goal;
+        const pct = g.target_amount > 0 ? Math.min(100, Math.round((g.current_amount / g.target_amount) * 100)) : 0;
+        goalEl.innerHTML = `
+          <div style="margin-bottom:12px;">
+            <div style="font-size:1rem;font-weight:700;">${g.title || g.goal_type}</div>
+            ${g.target_date ? `<div style="font-size:0.78rem;color:var(--lh-text-muted);margin-top:2px;">Prazo: ${new Date(g.target_date).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</div>` : ''}
+          </div>
+          <div style="margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:6px;">
+              <span style="color:var(--lh-text-muted);">Progresso</span>
+              <span style="font-weight:700;color:#2EA884;">${pct}%</span>
+            </div>
+            <div style="background:var(--lh-border);border-radius:4px;height:8px;">
+              <div style="background:linear-gradient(90deg,#1E56A0,#2EA884);height:100%;border-radius:4px;width:${pct}%;transition:width .5s ease;"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
+            <div><div style="font-size:0.72rem;color:var(--lh-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Já guardei</div><div style="font-size:1rem;font-weight:700;color:#2EA884;">${formatCurrency(g.current_amount || 0)}</div></div>
+            <div><div style="font-size:0.72rem;color:var(--lh-text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meta total</div><div style="font-size:1rem;font-weight:700;">${formatCurrency(g.target_amount || 0)}</div></div>
+          </div>`;
+      }
+    }
+  } catch(e) {
+    console.warn('loadProfileData:', e);
   }
 }
 
+function _setProfileField(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value || '—';
+}
+
+function _setAvatarImage(url) {
+  const img = document.getElementById('profileAvatarImg');
+  const initials = document.getElementById('profileAvatarInitials');
+  const headerImg = document.getElementById('headerAvatarImg');
+  const headerInitials = document.getElementById('headerAvatarInitials');
+  if (img) { img.src = url; img.style.display = 'block'; }
+  if (initials) initials.style.display = 'none';
+  if (headerImg) { headerImg.src = url; headerImg.style.display = 'block'; }
+  if (headerInitials) headerInitials.style.display = 'none';
+}
+
+async function uploadAvatar(file) {
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await fetch('/api/profile/avatar', { method: 'POST', body: formData });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || res.status); }
+    const data = await res.json();
+    _setAvatarImage(data.avatar_url + '?t=' + Date.now());
+  } catch(e) {
+    alert('Erro ao enviar foto: ' + e.message);
+  }
+}
 
 // =============================================================================
 // Estado de Navegação de Mês

@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -1353,6 +1353,90 @@ if __name__ == "__main__":
 
 
 # ── Cartões ────────────────────────────────────────────────────────────────
+@app.get("/api/profile/me")
+async def get_profile_me(request: Request):
+    """Retorna perfil completo do usuario (dados do onboarding + users table + cartoes + objetivo)."""
+    user = await get_current_user(request)
+    if ENABLE_AUTH and not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticacao obrigatoria.")
+    uid = user["id"] if user else None
+
+    profile_raw = await db_manager.get_onboarding_profile(uid) if uid else {}
+    profile = profile_raw or {}
+    if isinstance(profile, dict) and "onboarding_answers" in profile:
+        profile = profile["onboarding_answers"]
+
+    cards = await db_manager.get_credit_cards(uid) if uid else []
+    goal = await db_manager.get_active_goal(uid) if uid else None
+
+    # Recuperar avatar_url da tabela users
+    avatar_url = None
+    if uid and db_manager.is_connected and db_manager.pool:
+        async with db_manager.pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT avatar_url, created_at FROM users WHERE id=$1", uid)
+            if row:
+                avatar_url = row["avatar_url"]
+                member_since = row["created_at"].strftime("%B %Y") if row["created_at"] else None
+            else:
+                member_since = None
+    else:
+        member_since = None
+
+    return {
+        "name": user.get("name") if user else profile.get("name"),
+        "email": user.get("email") if user else None,
+        "avatar_url": avatar_url,
+        "member_since": member_since,
+        "user_type": profile.get("user_type", "pf"),
+        "age": profile.get("age"),
+        "occupation": profile.get("occupation"),
+        "marital_status": profile.get("marital_status"),
+        "dependents": profile.get("dependents", 0),
+        "monthly_income": profile.get("monthly_income", 0),
+        "risk_tolerance": profile.get("risk_tolerance", "moderado"),
+        "invests": profile.get("invests", "nao_investe"),
+        "investment_types": profile.get("investment_types", []),
+        "cards": cards,
+        "goal": goal,
+    }
+
+
+@app.post("/api/profile/avatar")
+async def upload_avatar(request: Request, file: UploadFile = File(...)):
+    """Recebe imagem de perfil, salva em static/uploads/avatars/ e atualiza users.avatar_url."""
+    user = await get_current_user(request)
+    if ENABLE_AUTH and not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticacao obrigatoria.")
+    uid = user["id"] if user else None
+    if not uid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    # Validar tipo de arquivo
+    allowed = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail="Formato invalido. Use JPEG, PNG, WebP ou GIF.")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else "jpg"
+    upload_dir = Path("static/uploads/avatars")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    dest = upload_dir / f"{uid}.{ext}"
+
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:  # 5 MB max
+        raise HTTPException(status_code=400, detail="Imagem muito grande. Maximo 5 MB.")
+
+    with open(dest, "wb") as f:
+        f.write(contents)
+
+    avatar_url = f"/static/uploads/avatars/{uid}.{ext}"
+
+    if db_manager.is_connected and db_manager.pool:
+        async with db_manager.pool.acquire() as conn:
+            await conn.execute("UPDATE users SET avatar_url=$1 WHERE id=$2", avatar_url, uid)
+
+    return {"avatar_url": avatar_url}
+
+
 @app.get("/api/profile/cards")
 async def get_cards(request: Request):
     user = getattr(request.state, 'user', None)

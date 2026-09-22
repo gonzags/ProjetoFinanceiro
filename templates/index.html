@@ -125,11 +125,12 @@
         </div>
 
         {% if user %}
-        <form action="/logout" method="POST" style="margin: 0; display: inline;">
-          <button type="submit" class="lh-btn" style="padding: 6px 12px; font-size: 0.85rem;" title="Encerrar sessão">
-            Sair
-          </button>
-        </form>
+        <button type="button" onclick="openProfileModal()" title="Meu Perfil" aria-label="Abrir perfil"
+                style="width:38px; height:38px; border-radius:50%; border:2px solid var(--lh-border); background:linear-gradient(135deg,#1E56A0,#06b6d4); cursor:pointer; overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:0.9rem; flex-shrink:0;"
+                id="headerAvatarBtn">
+          <img id="headerAvatarImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover;">
+          <span id="headerAvatarInitials">{{ (user_name or '?')[0]|upper }}</span>
+        </button>
         {% endif %}
 
         <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Alternar modo de contraste">
@@ -509,8 +510,8 @@
     </div>
   </div>
 
-  <!-- Modais existentes -->
-  {% include 'components/questionnaire.html' %}
+  <!-- Modais -->
+  {% include 'components/profile_modal.html' %}
   {% include 'components/onboarding_modal.html' %}
 
   <!-- JavaScript -->

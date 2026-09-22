@@ -1174,6 +1174,9 @@ class DatabaseManager:
             """
             ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
             """,
+            """
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+            """,
             # Bloco 2: expandir user_financial_profiles com colunas tipadas
             """
             ALTER TABLE user_financial_profiles
