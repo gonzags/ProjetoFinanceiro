@@ -1004,10 +1004,29 @@ async def calculate_methodology(request: Request, req: MethodologyRequest):
 
 @app.get("/onboarding", response_class=HTMLResponse)
 async def get_onboarding_page(request: Request):
-    """Página de onboarding standalone."""
-    user = await get_current_user(request)
+    """Página de onboarding standalone com wizard completo."""
+    user = await get_current_user(request) if ENABLE_AUTH else None
+    if ENABLE_AUTH and not user:
+        return RedirectResponse(url="/login?next=/onboarding", status_code=status.HTTP_303_SEE_OTHER)
+    if user and user.get("onboarding_completed"):
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+    now = datetime.now(timezone.utc)
     name = user["name"] if user else "Usuário"
-    return HTMLResponse(f"<html><body>Onboarding {name}</body></html>")
+    first_name = name.split()[0] if name else "Usuário"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="onboarding.html",
+        context={
+            "user": user,
+            "user_name": name,
+            "first_name": first_name,
+            "enable_auth": ENABLE_AUTH,
+            "current_year": now.year,
+            "current_month": now.month,
+        }
+    )
 
 # =============================================================================
 # Endpoints de Orçamento Mensal

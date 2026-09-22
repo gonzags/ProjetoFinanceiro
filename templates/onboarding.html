@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ledger Horizon | Configuração do Perfil</title>
+  <link rel="stylesheet" href="/static/css/ledger_horizon.css">
+  <style>
+    /* Reset de página para onboarding fullscreen */
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: #0f172a;
+      font-family: var(--lh-font, 'Inter', system-ui, sans-serif);
+    }
+
+    /* Backdrop que cobre a tela toda */
+    #onboardingBackdrop {
+      position: fixed; inset: 0;
+      background: #0f172a;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+
+    /* Container do wizard */
+    #onboardingWrap {
+      width: 100%; max-width: 640px;
+      background: var(--lh-surface, #1e293b);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+      max-height: 92vh; overflow-y: auto;
+      padding: 32px 28px;
+      color: var(--lh-text, #e2e8f0);
+    }
+
+    /* Cabeçalho Ledger */
+    #onboardingBrand {
+      text-align: center; margin-bottom: 28px;
+    }
+    #onboardingBrand .brand-logo {
+      font-size: 1.6rem; font-weight: 900;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    #onboardingBrand .brand-sub {
+      font-size: 0.8rem; color: #64748b; margin-top: 2px;
+    }
+
+    /* Reutiliza os estilos do modal embutido */
+    .lh-modal-backdrop { display: block !important; position: static !important; background: none !important; backdrop-filter: none !important; }
+    .lh-modal { max-width: none !important; width: 100% !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; }
+
+    /* Inputs e selects ficam legíveis no fundo escuro */
+    input, select, textarea {
+      background: rgba(255,255,255,0.06) !important;
+      color: var(--lh-text, #e2e8f0) !important;
+      border-color: rgba(255,255,255,0.12) !important;
+    }
+    input::placeholder { color: #64748b !important; }
+    label { color: var(--lh-text-muted, #94a3b8) !important; }
+
+    /* Botões */
+    #btnObNext  { background: #1E56A0 !important; color: #fff !important; border: none !important; }
+    #btnObBack  { background: transparent !important; color: #94a3b8 !important; border: 1px solid #334155 !important; }
+    #btnObSubmit{ background: #166534 !important; color: #fff !important; border: none !important; }
+  </style>
+</head>
+<body>
+
+<div id="onboardingBackdrop">
+  <div id="onboardingWrap">
+
+    <!-- Marca -->
+    <div id="onboardingBrand">
+      <div class="brand-logo">⬡ Ledger Horizon</div>
+      <div class="brand-sub">Configure seu perfil financeiro para continuar</div>
+    </div>
+
+    <!-- Inclui o conteúdo interno do modal de onboarding -->
+    {% include "components/onboarding_modal.html" %}
+
+  </div>
+</div>
+
+<!-- APP_CONFIG para o JS -->
+<script>
+  window.APP_CONFIG = {
+    enableAuth: {{ 'true' if enable_auth else 'false' }},
+    currentYear: {{ current_year }},
+    currentMonth: {{ current_month }},
+    isReturning: false,
+    userName: {{ user_name | tojson }},
+    onboardingMode: true     // abre o wizard imediatamente, sem esperar trigger do dashboard
+  };
+</script>
+
+<script src="/static/js/onboarding.js"></script>
+<script>
+  // Abrir o wizard imediatamente ao entrar nesta página
+  document.addEventListener('DOMContentLoaded', () => {
+    // Mostrar o modal / wizard
+    const modal = document.getElementById('onboardingModal');
+    if (modal) {
+      modal.style.display = 'block';
+    }
+
+    // Pré-preencher o nome do usuário vindo do cadastro se o campo estiver vazio
+    const obName = document.getElementById('obName');
+    if (obName && !obName.value && window.APP_CONFIG && window.APP_CONFIG.userName) {
+      obName.value = window.APP_CONFIG.userName;
+    }
+
+    // Inicializar wizard (função definida em onboarding.js)
+    if (typeof updateOnboardingUI === 'function') {
+      updateOnboardingUI();
+    }
+
+    // Após submit bem-sucedido, redirecionar para o dashboard
+    document.addEventListener('onboardingComplete', () => {
+      window.location.href = '/';
+    });
+  });
+</script>
+
+</body>
+</html>

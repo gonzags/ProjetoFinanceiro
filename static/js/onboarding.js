@@ -371,8 +371,9 @@ async function submitOnboardingFinal() {
     }
 
     showOnboardingFeedback("Perfil configurado com sucesso! Carregando seu dashboard...", "success");
+    document.dispatchEvent(new CustomEvent('onboardingComplete'));
     setTimeout(() => {
-      window.location.reload();
+      window.location.href = "/";
     }, 1200);
   } catch (err) {
     showOnboardingFeedback(err.message, "error");
