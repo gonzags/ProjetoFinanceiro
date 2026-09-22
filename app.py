@@ -179,18 +179,44 @@ class MethodologyRequest(BaseModel):
 
 class OnboardingInput(BaseModel):
     is_draft: bool = False
+    # Campos de identificação
     name: Optional[str] = None
     age: Optional[int] = None
     occupation: Optional[str] = None
+    user_type: Optional[str] = 'pf'          # pf / pj
+    marital_status: Optional[str] = None     # solteiro / casado / ...
+    dependents: Optional[int] = 0
+    work_regime: Optional[str] = None        # clt / pj_mei / autonomo / ...
+    # Renda
     monthly_income: Optional[float] = None
     extra_income: Optional[float] = None
-    fixed_expenses_val: Optional[float] = None
-    variable_expenses_val: Optional[float] = None
+    income_list: Optional[List[Dict[str, Any]]] = None  # [{name, amount, type, months_remaining}]
     saved_amount: Optional[float] = None
     saved_destination: Optional[str] = None
+    # Despesas
+    fixed_expenses_val: Optional[float] = None
+    fixed_expenses_list: Optional[List[Dict[str, Any]]] = None  # [{name, amount, category}]
+    variable_expenses_val: Optional[float] = None
+    variable_expense_averages: Optional[Dict[str, float]] = None  # {alimentacao_fora, transporte, ...}
+    # Investimentos
     invests: Optional[str] = None
     investment_types: Optional[List[str]] = None
     risk_tolerance: Optional[str] = None
+    # Objetivo
+    goal_type: Optional[str] = None
+    goal_title: Optional[str] = None
+    goal_target_amount: Optional[float] = None
+    goal_target_date: Optional[str] = None   # formato 'YYYY-MM-DD'
+    goal_current_amount: Optional[float] = None
+    # Cartões, contas, dívidas, patrimônio
+    cards: Optional[List[Dict[str, Any]]] = None
+    bank_accounts: Optional[List[Dict[str, Any]]] = None
+    debts: Optional[List[Dict[str, Any]]] = None
+    assets: Optional[List[Dict[str, Any]]] = None
+    # PJ
+    pj_data: Optional[Dict[str, Any]] = None
+    # Consentimento
+    data_consent: Optional[bool] = False
 
 class CreditCardInput(BaseModel):
     name: str
@@ -660,6 +686,27 @@ async def save_onboarding(request: Request, data: OnboardingInput):
 
     if uid:
         await db_manager.save_onboarding_profile(uid, payload, is_draft=is_draft)
+        # Salvar objetivo financeiro se fornecido
+        if data.goal_type and data.goal_target_amount and uid:
+            from datetime import date as _date
+            target_date = None
+            if data.goal_target_date:
+                try:
+                    target_date = _date.fromisoformat(data.goal_target_date)
+                except (ValueError, TypeError):
+                    target_date = None
+            goal_payload = {
+                'title': data.goal_title or data.goal_type,
+                'goal_type': data.goal_type,
+                'target_amount': data.goal_target_amount,
+                'target_date': target_date,
+                'current_amount': data.goal_current_amount or 0,
+            }
+            if hasattr(db_manager, 'upsert_financial_goal'):
+                await db_manager.upsert_financial_goal(uid, goal_payload)
+            else:
+                db_manager.demo_manager.upsert_financial_goal(uid, goal_payload)
+                
         summary = await db_manager.get_financial_summary("Outubro", user_id=uid)
     else:
         summary = await db_manager.get_financial_summary("Outubro")
@@ -767,6 +814,22 @@ async def get_kpis(request: Request, month: str = "Outubro"):
 
     uid = user["id"]
     summary = await db_manager.get_financial_summary(month, user_id=uid)
+    # Enriquecer summary com perfil completo (income_list, debts, etc.)
+    try:
+        full_profile = await db_manager.get_complete_financial_profile(uid)
+        income_list = full_profile.get('profile', {}).get('income_list', [])
+        debts_detail = full_profile.get('debts', [])
+        # Recalcular total de renda usando income_list se disponível
+        if income_list:
+            total_income_new = sum(float(s.get('amount', 0)) for s in income_list)
+            summary['total_income'] = total_income_new
+        # Recalcular debts usando dívidas reais
+        if debts_detail:
+            debts_new = sum(float(d.get('monthly_payment', 0)) for d in debts_detail)
+            summary['debts_total'] = debts_new
+    except Exception as e:
+        logger.warning(f"KPIs: não foi possível enriquecer com perfil completo: {e}")
+
     total_income = summary.get("total_income", 0)
     debts = summary.get("debts_total", 0)
     free_pct = max(0.0, min(100.0, round(((total_income - debts) / total_income) * 100, 1))) if total_income > 0 else 0.0
@@ -785,10 +848,19 @@ async def get_kpis(request: Request, month: str = "Outubro"):
 
 @app.get("/api/timeline")
 async def get_timeline(request: Request):
-    """Retorna o fluxo de caixa projetado mês a mês (Outubro a Agosto)."""
+    """Retorna o fluxo de caixa projetado mês a mês."""
     user = await get_request_user(request)
     uid = user["id"] if user else None
-    timeline = await db_manager.get_timeline(user_id=uid)
+    
+    # Enriquecer com perfil completo para projetar rendas temporárias e fim de dívidas
+    full_profile = {}
+    if uid and user and user.get('onboarding_completed'):
+        try:
+            full_profile = await db_manager.get_complete_financial_profile(uid)
+        except Exception as e:
+            logger.warning(f"Timeline: não foi possível obter perfil completo: {e}")
+    
+    timeline = await db_manager.get_timeline(user_id=uid, full_profile=full_profile)
     return [item.model_dump() for item in timeline]
 
 
@@ -852,6 +924,18 @@ async def update_questionnaire(request: Request, data: QuestionnaireInput):
     uid = user["id"] if user else None
     update_dict = data.model_dump(exclude_none=True)
     await db_manager.update_financial_inputs(update_dict, user_id=uid)
+    if uid:
+        try:
+            cached = await db_manager.get_cached_consensus(uid) if hasattr(db_manager, 'get_cached_consensus') else None
+            if not cached:
+                pass
+            else:
+                if hasattr(db_manager, 'invalidate_consensus_cache'):
+                    await db_manager.invalidate_consensus_cache(uid)
+                elif hasattr(db_manager, 'demo_manager'):
+                    db_manager.demo_manager.invalidate_cache(user_id=uid)
+        except Exception:
+            pass
 
     # Recalcular resumo do mês atual
     summary = await db_manager.get_financial_summary("Outubro", user_id=uid)
@@ -999,6 +1083,19 @@ async def upsert_expense(data: ExpenseEntryInput, request: Request):
     user_id = user["id"] if user else 0
     try:
         entry = await db_manager.upsert_expense_entry(user_id, data.model_dump())
+        uid = user_id
+        if uid:
+            try:
+                cached = await db_manager.get_cached_consensus(uid) if hasattr(db_manager, 'get_cached_consensus') else None
+                if not cached:
+                    pass
+                else:
+                    if hasattr(db_manager, 'invalidate_consensus_cache'):
+                        await db_manager.invalidate_consensus_cache(uid)
+                    elif hasattr(db_manager, 'demo_manager'):
+                        db_manager.demo_manager.invalidate_cache(user_id=uid)
+            except Exception:
+                pass
         return entry
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -1009,6 +1106,19 @@ async def delete_expense(entry_id: int, request: Request):
     user_id = user["id"] if user else 0
     try:
         await db_manager.delete_expense_entry(user_id, entry_id)
+        uid = user_id
+        if uid:
+            try:
+                cached = await db_manager.get_cached_consensus(uid) if hasattr(db_manager, 'get_cached_consensus') else None
+                if not cached:
+                    pass
+                else:
+                    if hasattr(db_manager, 'invalidate_consensus_cache'):
+                        await db_manager.invalidate_consensus_cache(uid)
+                    elif hasattr(db_manager, 'demo_manager'):
+                        db_manager.demo_manager.invalidate_cache(user_id=uid)
+            except Exception:
+                pass
         return {"status": "deleted", "id": entry_id}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -1031,6 +1141,19 @@ async def upsert_income(data: IncomeEntryInput, request: Request):
     user_id = user["id"] if user else 0
     try:
         entry = await db_manager.upsert_income_entry(user_id, data.model_dump())
+        uid = user_id
+        if uid:
+            try:
+                cached = await db_manager.get_cached_consensus(uid) if hasattr(db_manager, 'get_cached_consensus') else None
+                if not cached:
+                    pass
+                else:
+                    if hasattr(db_manager, 'invalidate_consensus_cache'):
+                        await db_manager.invalidate_consensus_cache(uid)
+                    elif hasattr(db_manager, 'demo_manager'):
+                        db_manager.demo_manager.invalidate_cache(user_id=uid)
+            except Exception:
+                pass
         return entry
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -1041,6 +1164,19 @@ async def delete_income(entry_id: int, request: Request):
     user_id = user["id"] if user else 0
     try:
         await db_manager.delete_income_entry(user_id, entry_id)
+        uid = user_id
+        if uid:
+            try:
+                cached = await db_manager.get_cached_consensus(uid) if hasattr(db_manager, 'get_cached_consensus') else None
+                if not cached:
+                    pass
+                else:
+                    if hasattr(db_manager, 'invalidate_consensus_cache'):
+                        await db_manager.invalidate_consensus_cache(uid)
+                    elif hasattr(db_manager, 'demo_manager'):
+                        db_manager.demo_manager.invalidate_cache(user_id=uid)
+            except Exception:
+                pass
         return {"status": "deleted", "id": entry_id}
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -1161,6 +1297,18 @@ async def patch_card_balance(request: Request, card_id: str, body: CardBalancePa
     if not ok:
         return JSONResponse({'error': 'not found'}, status_code=404)
     return JSONResponse({'ok': True})
+
+@app.put("/api/profile/cards/{card_id}")
+async def update_card(request: Request, card_id: str, body: CreditCardInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    card_data = body.model_dump()
+    card_data['id'] = card_id
+    card = await db_manager.upsert_credit_card(user['id'], card_data)
+    return JSONResponse(card)
 
 @app.delete("/api/profile/cards/{card_id}")
 async def delete_card(request: Request, card_id: str):

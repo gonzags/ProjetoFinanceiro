@@ -390,6 +390,39 @@ class DemoDataManager:
         self.save_credit_cards(user_id, new_cards)
         return len(new_cards) < len(cards)
 
+    def upsert_financial_goal(self, user_id, goal: dict) -> dict:
+        uid = str(user_id)
+        if uid not in self._users_data:
+            self._users_data[uid] = {}
+        goals = self._users_data[uid].get('goals', [])
+        # Desativar objetivo anterior
+        for g in goals:
+            g['is_active'] = False
+        import uuid as _uuid
+        goal_id = str(_uuid.uuid4())
+        new_goal = {
+            'id': goal_id,
+            'user_id': user_id,
+            'title': goal.get('title', 'Objetivo'),
+            'goal_type': goal.get('goal_type', 'outro'),
+            'target_amount': goal.get('target_amount', 0),
+            'target_date': goal.get('target_date'),  # pode ser date ou None
+            'current_amount': goal.get('current_amount', 0),
+            'monthly_contribution': goal.get('monthly_contribution', 0),
+            'is_active': True,
+        }
+        goals.append(new_goal)
+        self._users_data[uid]['goals'] = goals
+        return new_goal
+
+    def get_active_goal(self, user_id) -> Optional[dict]:
+        uid = str(user_id)
+        goals = self._users_data.get(uid, {}).get('goals', [])
+        for g in reversed(goals):
+            if g.get('is_active'):
+                return g
+        return None
+
     def get_bank_accounts(self, user_id) -> list:
         return self._users_data.get(str(user_id), {}).get('bank_accounts', [])
 
@@ -707,11 +740,40 @@ class DemoDataManager:
             "net_surplus": round(net_surplus, 2),
         }
 
-    def get_timeline(self, user_id: Optional[int] = None) -> List[MonthlyCashFlow]:
+    def get_timeline(self, user_id: Optional[int] = None, full_profile: Optional[Dict] = None) -> List[MonthlyCashFlow]:
         months = ["Outubro", "Novembro", "Dezembro", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto"]
         timeline = []
-        for m in months:
+        for i, m in enumerate(months):
             summary = self.get_financial_summary(m, user_id=user_id)
+            
+            # Ajuste de renda por fontes temporárias e fim de dívidas
+            if full_profile:
+                income_list = full_profile.get('profile', {}).get('income_list', [])
+                debts_detail = full_profile.get('debts', [])
+                
+                # Calcular renda do mês i (0 = mês atual)
+                monthly_income_adjusted = 0
+                for src in income_list:
+                    months_rem = src.get('months_remaining')
+                    # Fonte permanente (months_remaining=None ou 0) ou ainda ativa
+                    if months_rem is None or months_rem == 0 or i < months_rem:
+                        monthly_income_adjusted += float(src.get('amount', 0))
+                
+                # Calcular dívidas ativas no mês i
+                monthly_debts_adjusted = 0
+                for d in debts_detail:
+                    installments = d.get('installments_remaining')
+                    if installments is None or i < installments:
+                        monthly_debts_adjusted += float(d.get('monthly_payment', 0))
+                
+                if monthly_income_adjusted > 0:
+                    summary["total_income"] = monthly_income_adjusted
+                if monthly_debts_adjusted >= 0:
+                    summary["debts_total"] = monthly_debts_adjusted
+                
+                # Recalcular outflows e surplus
+                summary["total_outflow"] = summary["fixed_costs"] + summary["debts_total"] + summary["special_events"]
+                summary["net_surplus"] = summary["total_income"] - summary["total_outflow"]
             
             # Status label
             if m == "Outubro":
@@ -1555,9 +1617,9 @@ class DatabaseManager:
         await self._ensure_user_profile_loaded(user_id)
         return self.demo_manager.get_financial_summary(month, user_id=user_id)
 
-    async def get_timeline(self, user_id: Optional[int] = None) -> List[MonthlyCashFlow]:
+    async def get_timeline(self, user_id: Optional[int] = None, full_profile: Optional[Dict] = None) -> List[MonthlyCashFlow]:
         await self._ensure_user_profile_loaded(user_id)
-        return self.demo_manager.get_timeline(user_id=user_id)
+        return self.demo_manager.get_timeline(user_id=user_id, full_profile=full_profile)
 
     async def get_active_cache(self, max_age_hours: int = 24, user_id: Optional[int] = None) -> Optional[ConsensusRecord]:
         if not self.is_connected or not self.pool:
@@ -1945,19 +2007,42 @@ class DatabaseManager:
     # -------------------------------------------------------------------------
     # Financial Goals
     # -------------------------------------------------------------------------
-    async def get_active_goal(self, user_id: int) -> Optional[Dict[str, Any]]:
+    async def upsert_financial_goal(self, user_id, goal: dict) -> dict:
+        self.demo_manager.upsert_financial_goal(user_id, goal)
         if not self.is_connected or not self.pool:
-            return None
+            return goal
         async with self.pool.acquire() as conn:
-            row = await conn.fetchrow("""
-                SELECT id, user_id, title, goal_type, target_amount, target_date,
-                       current_amount, monthly_contribution, priority, is_active, notes,
-                       created_at, updated_at
-                FROM financial_goals
-                WHERE user_id=$1 AND is_active=TRUE AND priority=1
-                LIMIT 1
-            """, user_id)
-        return dict(row) if row else None
+            # Desativar objetivo anterior
+            await conn.execute(
+                "UPDATE financial_goals SET is_active=FALSE WHERE user_id=$1",
+                user_id
+            )
+            # Inserir novo
+            row = await conn.fetchrow(
+                """INSERT INTO financial_goals (user_id, title, goal_type, target_amount,
+                   target_date, current_amount, monthly_contribution, is_active)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING *""",
+                user_id,
+                goal.get('title', 'Objetivo'),
+                goal.get('goal_type', 'outro'),
+                goal.get('target_amount', 0),
+                goal.get('target_date'),
+                goal.get('current_amount', 0),
+                goal.get('monthly_contribution', 0),
+            )
+            return dict(row) if row else goal
+
+    async def get_active_goal(self, user_id) -> Optional[dict]:
+        if not self.is_connected or not self.pool:
+            return self.demo_manager.get_active_goal(user_id)
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM financial_goals WHERE user_id=$1 AND is_active=TRUE ORDER BY created_at DESC LIMIT 1",
+                user_id
+            )
+            if row:
+                return dict(row)
+        return self.demo_manager.get_active_goal(user_id)
 
     async def upsert_goal(self, user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         if not self.is_connected or not self.pool:
