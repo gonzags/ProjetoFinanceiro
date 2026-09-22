@@ -1042,12 +1042,28 @@ async def get_onboarding_page(request: Request):
     if ENABLE_AUTH and not user:
         return RedirectResponse(url="/login?next=/onboarding", status_code=status.HTTP_303_SEE_OTHER)
     if user and user.get("onboarding_completed"):
-        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        # Permitir re-edição via ?edit=1 (botão "Editar Perfil" do modal)
+        is_edit_mode = request.query_params.get("edit") == "1"
+        if not is_edit_mode:
+            return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     now = datetime.now(timezone.utc)
     name = user["name"] if user else "Usuário"
     first_name = name.split()[0] if name else "Usuário"
 
+    # Em modo edição, passar o perfil existente para pré-preenchimento
+    uid = user["id"] if user else None
+    existing_profile = {}
+    is_edit_mode = request.query_params.get("edit") == "1"
+    if is_edit_mode and uid:
+        raw = await db_manager.get_onboarding_profile(uid)
+        if raw:
+            if isinstance(raw, dict) and "onboarding_answers" in raw:
+                existing_profile = raw["onboarding_answers"]
+            else:
+                existing_profile = raw
+
+    import json as _json
     return templates.TemplateResponse(
         request=request,
         name="onboarding.html",
@@ -1058,6 +1074,8 @@ async def get_onboarding_page(request: Request):
             "enable_auth": ENABLE_AUTH,
             "current_year": now.year,
             "current_month": now.month,
+            "is_edit_mode": is_edit_mode,
+            "existing_profile_json": _json.dumps(existing_profile),
         }
     )
 

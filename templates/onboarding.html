@@ -126,7 +126,9 @@
     currentMonth: {{ current_month }},
     isReturning: false,
     userName: {{ user_name | tojson }},
-    onboardingMode: true     // abre o wizard imediatamente, sem esperar trigger do dashboard
+    onboardingMode: true,
+    isEditMode: {{ 'true' if is_edit_mode else 'false' }},
+    existingProfile: {{ existing_profile_json | default('{}') | safe }}
   };
 </script>
 
@@ -149,6 +151,48 @@
     // Inicializar wizard (função definida em onboarding.js)
     if (typeof updateOnboardingUI === 'function') {
       updateOnboardingUI();
+    }
+
+    // Pré-preencher formulário quando em modo edição
+    if (window.APP_CONFIG && window.APP_CONFIG.isEditMode && window.APP_CONFIG.existingProfile) {
+      const p = window.APP_CONFIG.existingProfile;
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+      const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+      setVal('obName', p.name);
+      setVal('obAge', p.age);
+      setVal('obOccupation', p.occupation);
+      setVal('obMaritalStatus', p.marital_status);
+      setVal('obDependents', p.dependents);
+      setVal('obWorkRegime', p.work_regime);
+      setVal('obSavedAmount', p.saved_amount);
+      setVal('obInvests', p.invests);
+      setVal('obGoalType', p.goal_type);
+      setVal('obGoalTitle', p.goal_title);
+      setVal('obGoalAmount', p.goal_target_amount);
+      setVal('obGoalDate', p.goal_target_date ? p.goal_target_date.substring(0, 7) : null);
+      setVal('obGoalCurrent', p.goal_current_amount);
+      setCheck('obDataConsent', p.data_consent);
+
+      // Risco
+      if (p.risk_tolerance) {
+        const rb = document.querySelector(`input[name="obRiskTolerance"][value="${p.risk_tolerance}"]`);
+        if (rb) rb.checked = true;
+      }
+
+      // Rendas salvas
+      if (p.income_list && p.income_list.length > 0 && typeof addIncomeRow === 'function') {
+        document.querySelectorAll('.ob-income-row').forEach(r => r.remove());
+        p.income_list.forEach(src => addIncomeRow(src));
+      } else if (p.monthly_income) {
+        setVal('obMonthlyIncome', p.monthly_income);
+      }
+
+      // Despesas fixas salvas
+      if (p.fixed_expenses_list && p.fixed_expenses_list.length > 0 && typeof addExpenseRow === 'function') {
+        document.querySelectorAll('.ob-expense-row').forEach(r => r.remove());
+        p.fixed_expenses_list.forEach(exp => addExpenseRow(exp));
+      }
     }
 
     // Após submit bem-sucedido, redirecionar para o dashboard
