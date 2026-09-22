@@ -1587,6 +1587,84 @@ class DatabaseManager:
             else:
                 self.demo_manager.set_onboarding_completed(user_id)
 
+            # Semear income_entries e expense_entries do mês atual
+            if self.is_connected and self.pool:
+                await self._seed_entries_from_onboarding(user_id, payload)
+
+    async def _seed_entries_from_onboarding(self, user_id: int, payload: Dict[str, Any]) -> None:
+        """Popula income_entries e expense_entries com os dados do formulário de onboarding."""
+        now = datetime.now(timezone.utc)
+        bm = await self.get_or_create_budget_month(user_id, now.year, now.month)
+        bm_id = bm["id"]
+
+        # ── Receitas ──────────────────────────────────────────────────────────
+        income_list = payload.get("income_list", [])
+        if not income_list:
+            # Fallback: usar os campos legados monthly_income / extra_income
+            monthly_income = float(payload.get("monthly_income") or 0)
+            extra_income = float(payload.get("extra_income") or 0)
+            if monthly_income > 0:
+                income_list.append({"name": "Salário", "amount": monthly_income, "type": "salary"})
+            if extra_income > 0:
+                income_list.append({"name": "Renda extra", "amount": extra_income, "type": "extra"})
+
+        async with self.pool.acquire() as conn:
+            # Limpar lançamentos de receita já existentes para não duplicar
+            existing_income = await conn.fetchval(
+                "SELECT COUNT(*) FROM income_entries WHERE user_id=$1 AND budget_month_id=$2",
+                user_id, bm_id
+            )
+            if existing_income == 0:
+                for src in income_list:
+                    amount = float(src.get("amount") or 0)
+                    if amount <= 0:
+                        continue
+                    income_type = src.get("type") or "other"
+                    # Mapear tipos do onboarding para enum do banco
+                    type_map = {
+                        "salary": "salary", "salario": "salary",
+                        "extra": "extra", "bonus": "extra",
+                        "benefit": "benefit", "beneficio": "benefit",
+                        "investment_return": "investment_return",
+                        "other": "other",
+                    }
+                    income_type = type_map.get(income_type.lower(), "other")
+                    await conn.execute("""
+                        INSERT INTO income_entries
+                            (user_id, budget_month_id, description, amount, income_type, is_received)
+                        VALUES ($1, $2, $3, $4, $5, TRUE)
+                    """, user_id, bm_id,
+                        src.get("name") or "Receita",
+                        amount,
+                        income_type
+                    )
+
+            # ── Despesas fixas ─────────────────────────────────────────────────
+            fixed_expenses_list = payload.get("fixed_expenses_list", [])
+            if not fixed_expenses_list:
+                # Fallback: usar valor total como uma linha só
+                fixed_val = float(payload.get("fixed_expenses_val") or 0)
+                if fixed_val > 0:
+                    fixed_expenses_list.append({"name": "Despesas Fixas", "amount": fixed_val, "category": "outro"})
+
+            existing_expenses = await conn.fetchval(
+                "SELECT COUNT(*) FROM expense_entries WHERE user_id=$1 AND budget_month_id=$2",
+                user_id, bm_id
+            )
+            if existing_expenses == 0:
+                for exp in fixed_expenses_list:
+                    amount = float(exp.get("amount") or 0)
+                    if amount <= 0:
+                        continue
+                    await conn.execute("""
+                        INSERT INTO expense_entries
+                            (user_id, budget_month_id, description, amount, expense_type, is_paid)
+                        VALUES ($1, $2, $3, $4, 'fixed', FALSE)
+                    """, user_id, bm_id,
+                        exp.get("name") or "Despesa",
+                        amount
+                    )
+
     async def get_onboarding_profile(self, user_id: int) -> Optional[Dict[str, Any]]:
         if not self.is_connected or not self.pool:
             return self.demo_manager.get_onboarding_profile(user_id)

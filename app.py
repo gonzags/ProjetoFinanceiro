@@ -721,6 +721,31 @@ async def save_onboarding(request: Request, data: OnboardingInput):
     }
 
 
+@app.post("/api/onboarding/reseed")
+async def reseed_onboarding_entries(request: Request):
+    """Re-semeia income_entries e expense_entries a partir do perfil de onboarding salvo.
+    Util para usuarios que ja concluiram o onboarding mas nao tem lancamentos no mes atual."""
+    user = await get_current_user(request)
+    if ENABLE_AUTH and not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Autenticacao obrigatoria.")
+    uid = user["id"] if user else None
+    if not uid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario nao identificado.")
+
+    profile = await db_manager.get_onboarding_profile(uid)
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Perfil de onboarding nao encontrado.")
+
+    payload = profile
+    if isinstance(payload, dict) and "onboarding_answers" in payload:
+        payload = payload["onboarding_answers"]
+
+    if db_manager.is_connected and db_manager.pool:
+        await db_manager._seed_entries_from_onboarding(uid, payload)
+
+    return {"status": "ok", "message": "Lancamentos do mes atual re-semeados com sucesso."}
+
+
 # -----------------------------------------------------------------------------
 # Rotas Web (Jinja2)
 # -----------------------------------------------------------------------------
