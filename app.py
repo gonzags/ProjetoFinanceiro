@@ -1264,11 +1264,46 @@ async def generate_portfolio(request: Request):
     result = await consensus_engine.run_consensus_loop(summary, force_recalculate=True, user_id=user_id)
     result_dict = result.model_dump()
 
-    # Extrair e salvar portfólio se a IA retornou alocação de investimentos
-    portfolio_data = result_dict.get("provider_metadata", {}).get("portfolio", {})
-    if portfolio_data and user_id:
+    # Construir portfólio a partir da alocação do consenso e do perfil do usuário
+    alloc = result_dict.get("allocation", {})
+    # O percentual destinado a futuro/poupança é a base do portfólio de investimentos
+    pct_savings = float(alloc.get("savings", alloc.get("futuro", 0)))
+    monthly_income = float(summary.get("total_income", 0))
+    monthly_investment_target = round(monthly_income * (pct_savings / 100), 2) if monthly_income > 0 else 0.0
+
+    # Determinar perfil de risco do usuário para distribuição dos ativos
+    profile_payload = (profile or {}).get("payload", profile or {})
+    risk_tolerance = profile_payload.get("risk_tolerance", "moderado")
+
+    # Distribuição padrão por perfil de risco (soma = 100%)
+    risk_map = {
+        "conservador":  {"pct_renda_fixa": 50, "pct_tesouro": 30, "pct_fiis": 10, "pct_acoes": 0,  "pct_reserva_liquida": 10, "pct_cripto": 0},
+        "moderado":     {"pct_renda_fixa": 35, "pct_tesouro": 25, "pct_fiis": 15, "pct_acoes": 15, "pct_reserva_liquida": 8,  "pct_cripto": 2},
+        "arrojado":     {"pct_renda_fixa": 20, "pct_tesouro": 15, "pct_fiis": 15, "pct_acoes": 40, "pct_reserva_liquida": 5,  "pct_cripto": 5},
+        "agressivo":    {"pct_renda_fixa": 10, "pct_tesouro": 10, "pct_fiis": 10, "pct_acoes": 55, "pct_reserva_liquida": 5,  "pct_cripto": 10},
+    }
+    dist = risk_map.get(risk_tolerance.lower() if risk_tolerance else "moderado", risk_map["moderado"])
+
+    # Calcular meses até o objetivo se disponível
+    months_to_goal = None
+    if goal and goal.get("target_amount") and goal.get("current_amount") is not None and monthly_investment_target > 0:
+        remaining = float(goal["target_amount"]) - float(goal.get("current_amount", 0))
+        if remaining > 0:
+            months_to_goal = max(1, round(remaining / monthly_investment_target))
+
+    portfolio_data = {
+        **dist,
+        "monthly_investment_target": monthly_investment_target,
+        "emergency_reserve_target": round(monthly_income * 6, 2),
+        "months_to_goal": months_to_goal,
+        "rationale": f"Perfil {risk_tolerance or 'moderado'} — {result_dict.get('reasoning_summary', '')}".strip(),
+    }
+
+    if user_id:
         saved = await db_manager.save_portfolio(user_id, portfolio_data, consensus_record_id=result_dict.get("id"))
         result_dict["portfolio"] = saved
+    else:
+        result_dict["portfolio"] = portfolio_data
 
     return result_dict
 
