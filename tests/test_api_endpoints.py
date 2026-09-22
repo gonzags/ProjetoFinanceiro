@@ -48,6 +48,13 @@ def test_api_status(client):
     assert "is_connected" in data
 
 
+def test_health_endpoint(client):
+    """Endpoint /health deve responder 200 ok para o Docker Healthcheck."""
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
 def test_api_kpis(client):
     """Sem usuário autenticado, /api/kpis retorna estado vazio (sem seed data)."""
     resp = client.get("/api/kpis?month=Outubro")

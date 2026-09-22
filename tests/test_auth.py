@@ -243,6 +243,13 @@ def test_protected_routes_when_enable_auth_true(client, monkeypatch):
     resp_kpis = client_unauth.get("/api/kpis")
     assert resp_kpis.status_code == 401
 
+    # 2.1 Rotas públicas de healthcheck devem responder 200 mesmo sem cookie
+    resp_health = client_unauth.get("/health")
+    assert resp_health.status_code == 200
+    assert resp_health.json() == {"status": "ok"}
+    resp_status = client_unauth.get("/api/status")
+    assert resp_status.status_code == 200
+
     # 3. Criar usuário com onboarding completo e logar
     test_email = "auth_guard_user@horizon.local"
     user = db_manager.demo_manager.create_user(

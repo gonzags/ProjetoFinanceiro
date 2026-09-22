@@ -110,6 +110,8 @@ AUTH_PUBLIC_PATHS: frozenset = frozenset({
     "/login", "/register",
     "/auth/google", "/auth/google/callback",
     "/favicon.ico",
+    "/health",
+    "/api/status",
 })
 
 @app.middleware("http")
@@ -791,6 +793,12 @@ async def index_page(request: Request):
 # -----------------------------------------------------------------------------
 # Endpoints REST API
 # -----------------------------------------------------------------------------
+@app.get("/health")
+async def health_check():
+    """Liveness probe para o Docker Healthcheck e orquestradores."""
+    return {"status": "ok"}
+
+
 @app.get("/api/status")
 async def get_system_status():
     """Retorna o status de conexão ao data warehouse / modo demo."""
