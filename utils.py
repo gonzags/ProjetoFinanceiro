@@ -2092,6 +2092,17 @@ class DatabaseManager:
         self.demo_manager.upsert_financial_goal(user_id, goal)
         if not self.is_connected or not self.pool:
             return goal
+        from datetime import date as _date_type
+        # Converter target_date de string para date se necessário
+        raw_date = goal.get('target_date')
+        if isinstance(raw_date, str):
+            try:
+                raw_date = _date_type.fromisoformat(raw_date[:10])
+            except (ValueError, TypeError):
+                raw_date = None
+        elif not isinstance(raw_date, _date_type):
+            raw_date = None
+
         async with self.pool.acquire() as conn:
             # Desativar objetivo anterior
             await conn.execute(
@@ -2106,12 +2117,13 @@ class DatabaseManager:
                 user_id,
                 goal.get('title', 'Objetivo'),
                 goal.get('goal_type', 'outro'),
-                goal.get('target_amount', 0),
-                goal.get('target_date'),
-                goal.get('current_amount', 0),
-                goal.get('monthly_contribution', 0),
+                float(goal.get('target_amount') or 0),
+                raw_date,
+                float(goal.get('current_amount') or 0),
+                float(goal.get('monthly_contribution') or 0),
             )
             return dict(row) if row else goal
+
 
     async def get_active_goal(self, user_id) -> Optional[dict]:
         if not self.is_connected or not self.pool:
@@ -2128,7 +2140,22 @@ class DatabaseManager:
     async def upsert_goal(self, user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         if not self.is_connected or not self.pool:
             return {"id": 0, **data}
+        from datetime import date as _date_type
+
+        # Converter target_date de string para date se necessário
+        def _parse_date(val):
+            if isinstance(val, _date_type):
+                return val
+            if isinstance(val, str):
+                try:
+                    return _date_type.fromisoformat(val[:10])
+                except (ValueError, TypeError):
+                    pass
+            return None
+
         goal_id = data.get("id")
+        target_date = _parse_date(data.get("target_date"))
+
         async with self.pool.acquire() as conn:
             async with conn.transaction():
                 if data.get("priority", 1) == 1:
@@ -2146,8 +2173,8 @@ class DatabaseManager:
                         RETURNING *
                     """, goal_id, user_id,
                         data["title"], data["goal_type"], data.get("target_amount"),
-                        data.get("target_date"), float(data.get("current_amount", 0)),
-                        float(data.get("monthly_contribution", 0)), data.get("priority", 1),
+                        target_date, float(data.get("current_amount") or 0),
+                        float(data.get("monthly_contribution") or 0), data.get("priority", 1),
                         data.get("is_active", True), data.get("notes"))
                 else:
                     row = await conn.fetchrow("""
@@ -2156,8 +2183,8 @@ class DatabaseManager:
                         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
                         RETURNING *
                     """, user_id, data["title"], data["goal_type"], data.get("target_amount"),
-                        data.get("target_date"), float(data.get("current_amount", 0)),
-                        float(data.get("monthly_contribution", 0)), data.get("priority", 1),
+                        target_date, float(data.get("current_amount") or 0),
+                        float(data.get("monthly_contribution") or 0), data.get("priority", 1),
                         data.get("notes"))
         return dict(row)
 
