@@ -298,6 +298,58 @@ async function loadKPIs() {
 }
 
 let aiProgressInterval = null;
+let _globalOverlayInterval = null;
+
+function _startGlobalOverlay() {
+  const ov = document.getElementById('aiGlobalOverlay');
+  const bar = document.getElementById('aiGlobalProgressBar');
+  const pct = document.getElementById('aiGlobalPct');
+  const stage = document.getElementById('aiGlobalStage');
+  if (!ov) return;
+
+  ov.classList.add('visible');
+
+  const stages = [
+    { at:  5, text: 'Estruturando dados de receitas e custos fixos...' },
+    { at: 30, text: 'Consultando comitê de inteligência artificial...' },
+    { at: 60, text: 'Auditando riscos e metas orçamentárias...' },
+    { at: 85, text: 'Consolidando parecer e alocação recomendada...' },
+  ];
+
+  let p = 5;
+  if (bar) bar.style.width = `${p}%`;
+  if (pct) pct.textContent = `${p}%`;
+  if (stage) stage.textContent = stages[0].text;
+
+  if (_globalOverlayInterval) clearInterval(_globalOverlayInterval);
+  _globalOverlayInterval = setInterval(() => {
+    if (p < 92) {
+      p += Math.floor(Math.random() * 5) + 3;
+      if (p > 92) p = 92;
+      if (bar) bar.style.width = `${p}%`;
+      if (pct) pct.textContent = `${p}%`;
+      const matched = stages.slice().reverse().find(s => p >= s.at);
+      if (matched && stage) stage.textContent = matched.text;
+    }
+  }, 500);
+}
+
+function _stopGlobalOverlay(success) {
+  if (_globalOverlayInterval) { clearInterval(_globalOverlayInterval); _globalOverlayInterval = null; }
+  const ov = document.getElementById('aiGlobalOverlay');
+  const bar = document.getElementById('aiGlobalProgressBar');
+  const pct = document.getElementById('aiGlobalPct');
+  const stage = document.getElementById('aiGlobalStage');
+  if (!ov) return;
+  if (success) {
+    if (bar) bar.style.width = '100%';
+    if (pct) pct.textContent = '100%';
+    if (stage) stage.textContent = '✓ Análise concluída!';
+    setTimeout(() => ov.classList.remove('visible'), 600);
+  } else {
+    ov.classList.remove('visible');
+  }
+}
 
 function startAiLoadingIndicator(customMessage) {
   const banner = document.getElementById('aiLoadingBanner');
@@ -305,10 +357,10 @@ function startAiLoadingIndicator(customMessage) {
   const pctEl = document.getElementById('aiLoadingPct');
   const barEl = document.getElementById('aiLoadingBar');
   const timestamp = document.getElementById('analysisTimestamp');
-  
+
   if (!banner) return;
   banner.style.display = 'block';
-  
+
   if (timestamp) timestamp.textContent = 'Processando comitê de inteligência artificial...';
 
   let pct = 8;
@@ -367,15 +419,18 @@ function stopAiLoadingIndicator(success = true) {
 }
 
 async function loadConsensus() {
+  _startGlobalOverlay();
   startAiLoadingIndicator('Carregando parecer do comitê de inteligência artificial...');
   try {
     const res = await fetch('/api/consensus?month=Outubro');
     if (!res.ok) throw new Error('Falha ao carregar consenso');
     const data = await res.json();
+    _stopGlobalOverlay(true);
     stopAiLoadingIndicator(true);
     renderConsensus(data);
   } catch (e) {
     console.error('Erro no consenso:', e);
+    _stopGlobalOverlay(false);
     stopAiLoadingIndicator(false);
   }
 }
