@@ -74,8 +74,17 @@ function validateCurrentStep() {
     if (isNaN(age) || age < 14 || age > 120) { showOnboardingFeedback("Por favor, insira uma idade válida (14–120).", "error"); return false; }
     if (!occ) { showOnboardingFeedback("Por favor, informe sua profissão ou área.", "error"); return false; }
   } else if (currentOnboardingStep === 2) {
-    const income = parseFloat(document.getElementById("obIncome")?.value);
-    if (isNaN(income) || income <= 0) { showOnboardingFeedback("Por favor, informe sua renda líquida mensal.", "error"); return false; }
+    // Pelo menos 1 fonte de renda com nome e valor positivo
+    const names   = document.querySelectorAll('.ob-income-name');
+    const amounts = document.querySelectorAll('.ob-income-amount');
+    let hasValidIncome = false;
+    for (let i = 0; i < names.length; i++) {
+      if (names[i].value.trim() && parseFloat(amounts[i].value) > 0) { hasValidIncome = true; break; }
+    }
+    if (!hasValidIncome) {
+      showOnboardingFeedback('Adicione ao menos uma fonte de renda com nome e valor.', 'error');
+      return false;
+    }
   } else if (currentOnboardingStep === 3) {
     // Despesas itemizadas — pelo menos 1 linha com nome e valor
     const names   = document.querySelectorAll(".ob-expense-name");
@@ -119,7 +128,29 @@ function collectOnboardingData(isDraft = false) {
   const selectedRisk    = document.querySelector('input[name="obRiskTolerance"]:checked')?.value || "moderado";
   const dataConsent     = document.getElementById("obDataConsent")?.checked || false;
 
-  // Coletar despesas itemizadas
+  // ── Coletar fontes de renda itemizadas ──────────────────────────────────
+  const incomeRows = document.querySelectorAll(".ob-income-row");
+  const incomeList = [];
+  incomeRows.forEach(row => {
+    const name   = row.querySelector(".ob-income-name")?.value.trim();
+    const amount = parseFloat(row.querySelector(".ob-income-amount")?.value) || 0;
+    const type   = row.querySelector(".ob-income-type")?.value || "other";
+    const months = parseInt(row.querySelector(".ob-income-months")?.value, 10) || null;  // null = permanente
+    if (name && amount > 0) {
+      incomeList.push({ name, amount, type, months_remaining: months });
+    }
+  });
+
+  // Derivados para compatibilidade com backend legado
+  const permanentIncome = incomeList
+    .filter(s => !s.months_remaining && ['salary','benefit'].includes(s.type))
+    .reduce((s, e) => s + e.amount, 0);
+  const temporaryIncome = incomeList
+    .filter(s => s.months_remaining || ['extra','bonus','investment_return','other'].includes(s.type))
+    .reduce((s, e) => s + e.amount, 0);
+  const totalMonthlyIncome = incomeList.reduce((s, e) => s + e.amount, 0);
+
+  // ── Coletar despesas itemizadas ──────────────────────────────────────────
   const expenseRows = document.querySelectorAll(".ob-expense-row");
   const fixedExpenses = [];
   expenseRows.forEach(row => {
@@ -130,15 +161,15 @@ function collectOnboardingData(isDraft = false) {
       fixedExpenses.push({ name, amount, category });
     }
   });
+  const fixedTotal = fixedExpenses.reduce((s, e) => s + e.amount, 0);
 
-  // Totais agregados para compatibilidade com o backend legado
-  const fixedTotal    = fixedExpenses.reduce((s, e) => s + e.amount, 0);
-  const goalType      = document.getElementById("obGoalType")?.value || "emergencia";
-  const goalTitleEl   = document.getElementById("obGoalTitle");
-  const goalTitle     = (goalTitleEl?.value.trim()) || goalTypeDefaultTitle(goalType);
-  const goalAmount    = parseFloat(document.getElementById("obGoalAmount")?.value) || null;
-  const goalDate      = document.getElementById("obGoalDate")?.value || null;
-  const goalCurrent   = parseFloat(document.getElementById("obGoalCurrent")?.value) || 0;
+  // ── Objetivo ─────────────────────────────────────────────────────────────
+  const goalType    = document.getElementById("obGoalType")?.value || "emergencia";
+  const goalTitleEl = document.getElementById("obGoalTitle");
+  const goalTitle   = goalTitleEl?.value.trim() || goalTypeDefaultTitle(goalType);
+  const goalAmount  = parseFloat(document.getElementById("obGoalAmount")?.value) || null;
+  const goalDate    = document.getElementById("obGoalDate")?.value || null;
+  const goalCurrent = parseFloat(document.getElementById("obGoalCurrent")?.value) || 0;
 
   return {
     is_draft:              isDraft,
@@ -147,14 +178,15 @@ function collectOnboardingData(isDraft = false) {
     name:                  document.getElementById("obName")?.value.trim() || "",
     age:                   parseInt(document.getElementById("obAge")?.value, 10) || null,
     occupation:            document.getElementById("obOccupation")?.value.trim() || "",
-    // Renda
-    monthly_income:        parseFloat(document.getElementById("obIncome")?.value) || 0.0,
-    extra_income:          parseFloat(document.getElementById("obExtraIncome")?.value) || 0.0,
+    // Renda — lista detalhada + derivados para compatibilidade
+    income_list:           incomeList,
+    monthly_income:        permanentIncome || totalMonthlyIncome,   // só permanente, ou tudo se não houver distinção
+    extra_income:          temporaryIncome,
     saved_amount:          parseFloat(document.getElementById("obSavedAmount")?.value) || 0.0,
-    // Despesas (valor agregado para compatibilidade + lista detalhada)
+    // Despesas
     fixed_expenses_val:    fixedTotal,
     fixed_expenses_list:   fixedExpenses,
-    variable_expenses_val: 0,          // removido do wizard; será preenchido mês a mês no dashboard
+    variable_expenses_val: 0,
     // Objetivo
     goal_type:             goalType,
     goal_title:            goalTitle,
