@@ -4,38 +4,38 @@
  */
 
 let currentOnboardingStep = 1;
-const totalOnboardingSteps = 5;  // Modal atual usa steps 1-5 (step3=despesas, step4=objetivo, step5=invest+consentimento)
+let userType = 'pf';  // NOVA VARIÁVEL GLOBAL
+const PF_TOTAL_STEPS = 9;
+const PJ_TOTAL_STEPS = 7;
+
+function getTotalSteps() {
+  return userType === 'pj' ? PJ_TOTAL_STEPS : PF_TOTAL_STEPS;
+}
+
+const totalOnboardingSteps = 9;  // Manter para compatibilidade, mas usar getTotalSteps()
 
 const stepHeaders = {
-  1: {
-    title: "Identificação & Atuação",
-    subtitle: "Conte-nos sobre você para que o comitê de inteligência conheça seu momento profissional.",
-    percent: "20% concluído"
-  },
-  2: {
-    title: "Rendimentos & Patrimônio",
-    subtitle: "Informe sua renda e quanto já tem guardado para dimensionarmos seu fluxo de caixa.",
-    percent: "40% concluído"
-  },
-  3: {
-    title: "Gastos Fixos Mensais",
-    subtitle: "Liste seus custos fixos mês a mês — quanto mais detalhar, mais precisa será a análise.",
-    percent: "60% concluído"
-  },
-  4: {
-    title: "Objetivo Financeiro Principal",
-    subtitle: "Defina sua meta principal para que a IA calcule o caminho mais eficiente até lá.",
-    percent: "80% concluído"
-  },
-  5: {
-    title: "Perfil de Investimentos & Consentimento",
-    subtitle: "Defina seu perfil de risco e autorize o compartilhamento de dados com os modelos de IA.",
-    percent: "100% — Quase lá!"
-  }
+  1: { title: 'Perfil Pessoal', subtitle: 'Conte-nos um pouco sobre você para personalizar a análise.' },
+  2: { title: 'Fontes de Renda', subtitle: 'Liste cada fonte de renda separadamente, incluindo temporárias.' },
+  3: { title: 'Cartões & Contas', subtitle: 'Seus cartões e contas bancárias para rastrear faturas e fluxo.' },
+  4: { title: 'Dívidas & Financiamentos', subtitle: 'Dívidas ativas que impactam seu fluxo de caixa mensal.' },
+  5: { title: 'Patrimônio & Bens', subtitle: 'Imóvel, veículo e investimentos já existentes.' },
+  6: { title: 'Despesas Fixas', subtitle: 'Gastos fixos mensais — quanto mais detalhar, melhor a análise.' },
+  7: { title: 'Despesas Variáveis', subtitle: 'Médias mensais de gastos variáveis para calibrar sua margem real.' },
+  8: { title: 'Objetivo Financeiro', subtitle: 'Defina uma meta clara para que a IA planeje o caminho.' },
+  9: { title: 'Perfil & Consentimento', subtitle: 'Finalize com suas preferências de investimento e autorize o uso dos dados.' },
 };
 
+function handleUserTypeChange() {
+  userType = document.getElementById('obUserType')?.value || 'pf';
+  const pjSection = document.getElementById('pjSection');
+  if (pjSection) pjSection.style.display = userType === 'pj' ? 'block' : 'none';
+  updateOnboardingUI();
+}
+
 function updateOnboardingUI() {
-  for (let i = 1; i <= totalOnboardingSteps; i++) {
+  const total = getTotalSteps();
+  for (let i = 1; i <= 9; i++) {
     const stepEl = document.getElementById(`step${i}`);
     if (stepEl) {
       stepEl.style.display = i === currentOnboardingStep ? "block" : "none";
@@ -49,19 +49,21 @@ function updateOnboardingUI() {
   const percentEl = document.getElementById("onboardingStepPercent");
   const barEl     = document.getElementById("onboardingProgressBar");
 
+  const pct = Math.round((currentOnboardingStep / total) * 100);
+
   if (titleEl)    titleEl.textContent    = info.title;
   if (subtitleEl) subtitleEl.textContent = info.subtitle;
-  if (badgeEl)    badgeEl.textContent    = `Passo ${currentOnboardingStep} de ${totalOnboardingSteps}`;
-  if (percentEl)  percentEl.textContent  = info.percent;
-  if (barEl)      barEl.style.width      = `${(currentOnboardingStep / totalOnboardingSteps) * 100}%`;
+  if (badgeEl)    badgeEl.textContent    = `Passo ${currentOnboardingStep} de ${total}`;
+  if (percentEl)  percentEl.textContent  = `${pct}% concluído`;
+  if (barEl)      barEl.style.width      = `${pct}%`;
 
   const btnPrev   = document.getElementById("btnObPrev");
   const btnNext   = document.getElementById("btnObNext");
   const btnSubmit = document.getElementById("btnObSubmit");
 
   if (btnPrev)   btnPrev.style.display   = currentOnboardingStep > 1 ? "inline-block" : "none";
-  if (btnNext)   btnNext.style.display   = currentOnboardingStep < totalOnboardingSteps ? "inline-block" : "none";
-  if (btnSubmit) btnSubmit.style.display = currentOnboardingStep === totalOnboardingSteps ? "inline-block" : "none";
+  if (btnNext)   btnNext.style.display   = currentOnboardingStep < total ? "inline-block" : "none";
+  if (btnSubmit) btnSubmit.style.display = currentOnboardingStep === total ? "inline-block" : "none";
 }
 
 function validateCurrentStep() {
@@ -86,18 +88,32 @@ function validateCurrentStep() {
       return false;
     }
   } else if (currentOnboardingStep === 3) {
-    // Despesas itemizadas — pelo menos 1 linha com nome e valor
-    const names   = document.querySelectorAll(".ob-expense-name");
-    const amounts = document.querySelectorAll(".ob-expense-amount");
+    // Cartões & Contas — sem obrigatoriedade, mas validar consistency
+    return true; // Pode avançar com 0 cartões e 0 contas
+  } else if (currentOnboardingStep === 4) {
+    // Dívidas — se não marcou "sem dívidas" e tem linhas vazias, alertar
+    const noDebts = document.getElementById('obNoDebts')?.checked;
+    if (!noDebts) {
+      const rows = document.querySelectorAll('.ob-debt-row');
+      // OK se não tem linhas (equivale a sem dívidas)
+    }
+    return true;
+  } else if (currentOnboardingStep === 5) {
+    // Patrimônio — sem obrigatoriedade
+    return true;
+  } else if (currentOnboardingStep === 6) {
+    // Despesas itemizadas (era step 3)
+    const names = document.querySelectorAll('.ob-expense-name');
+    const amounts = document.querySelectorAll('.ob-expense-amount');
     let hasValid = false;
     for (let i = 0; i < names.length; i++) {
       if (names[i].value.trim() && parseFloat(amounts[i].value) > 0) { hasValid = true; break; }
     }
-    if (!hasValid) {
-      showOnboardingFeedback("Adicione pelo menos um custo fixo com nome e valor.", "error");
-      return false;
-    }
-  } else if (currentOnboardingStep === 5) {
+    if (!hasValid) { showOnboardingFeedback('Adicione ao menos uma despesa fixa.', 'error'); return false; }
+  } else if (currentOnboardingStep === 7) {
+    // Despesas variáveis — sem obrigatoriedade
+    return true;
+  } else if (currentOnboardingStep === 9) {
     const consent = document.getElementById("obDataConsent");
     if (consent && !consent.checked) {
       showOnboardingFeedback("É necessário aceitar os termos de compartilhamento de dados para continuar.", "error");
@@ -109,7 +125,8 @@ function validateCurrentStep() {
 
 function onboardingNextStep() {
   if (!validateCurrentStep()) return;
-  if (currentOnboardingStep < totalOnboardingSteps) {
+  const total = getTotalSteps();
+  if (currentOnboardingStep < total) {
     currentOnboardingStep++;
     updateOnboardingUI();
   }
@@ -122,7 +139,7 @@ function onboardingPrevStep() {
   }
 }
 
-function collectOnboardingData(isDraft = false) {
+function collectOnboardingData() {
   const assetCheckboxes = document.querySelectorAll('input[name="obAssetType"]:checked');
   const selectedAssets  = Array.from(assetCheckboxes).map(cb => cb.value);
   const selectedRisk    = document.querySelector('input[name="obRiskTolerance"]:checked')?.value || "moderado";
@@ -171,9 +188,123 @@ function collectOnboardingData(isDraft = false) {
   const goalDate    = document.getElementById("obGoalDate")?.value || null;
   const goalCurrent = parseFloat(document.getElementById("obGoalCurrent")?.value) || 0;
 
+  // ── Coletar cartões ──────────────────────────────────────────────────────
+  const cardRows = document.querySelectorAll('.ob-card-row');
+  const cards = [];
+  cardRows.forEach(row => {
+    const name = row.querySelector('.ob-card-name')?.value.trim();
+    const closingDay = parseInt(row.querySelector('.ob-card-closing')?.value) || null;
+    const dueDay = parseInt(row.querySelector('.ob-card-due')?.value) || null;
+    if (name && closingDay && dueDay) {
+      cards.push({
+        name, closing_day: closingDay, due_day: dueDay,
+        credit_limit: parseFloat(row.querySelector('.ob-card-limit')?.value) || 0,
+        current_balance: parseFloat(row.querySelector('.ob-card-balance')?.value) || 0,
+      });
+    }
+  });
+
+  // ── Coletar contas ───────────────────────────────────────────────────────
+  const accountRows = document.querySelectorAll('.ob-account-row');
+  const bankAccounts = [];
+  accountRows.forEach(row => {
+    const bankName = row.querySelector('.ob-account-bank')?.value.trim();
+    if (bankName) {
+      bankAccounts.push({
+        bank_name: bankName,
+        account_type: row.querySelector('.ob-account-type')?.value || 'corrente',
+        balance_approx: parseFloat(row.querySelector('.ob-account-balance')?.value) || 0,
+      });
+    }
+  });
+
+  // ── Coletar dívidas ──────────────────────────────────────────────────────
+  const noDebts = document.getElementById('obNoDebts')?.checked;
+  const debtRows = document.querySelectorAll('.ob-debt-row');
+  const debts = [];
+  if (!noDebts) {
+    debtRows.forEach(row => {
+      const desc = row.querySelector('.ob-debt-desc')?.value.trim();
+      const payment = parseFloat(row.querySelector('.ob-debt-payment')?.value) || 0;
+      if (desc && payment > 0) {
+        debts.push({
+          description: desc,
+          debt_type: row.querySelector('.ob-debt-type')?.value || 'outro',
+          total_amount: parseFloat(row.querySelector('.ob-debt-total')?.value) || 0,
+          monthly_payment: payment,
+          installments_remaining: parseInt(row.querySelector('.ob-debt-installments')?.value) || null,
+          interest_rate_monthly: parseFloat(row.querySelector('.ob-debt-interest')?.value) || null,
+        });
+      }
+    });
+  }
+
+  // ── Coletar patrimônio ───────────────────────────────────────────────────
+  const assets = [];
+  const imovelVal = document.getElementById('obImovel')?.value;
+  if (imovelVal && imovelVal !== 'nenhum') {
+    assets.push({
+      asset_type: imovelVal === 'proprio_quitado' ? 'imovel_proprio' : 'imovel_financiando',
+      description: 'Imóvel',
+      estimated_value: parseFloat(document.getElementById('obImovelValue')?.value) || null,
+      monthly_payment: imovelVal === 'financiando' ? parseFloat(document.getElementById('obImovelPayment')?.value) || null : null,
+      installments_remaining: imovelVal === 'financiando' ? parseInt(document.getElementById('obImovelMonths')?.value) || null : null,
+    });
+  }
+  const veiculoVal = document.getElementById('obVeiculo')?.value;
+  if (veiculoVal && veiculoVal !== 'nenhum') {
+    assets.push({
+      asset_type: veiculoVal === 'proprio_quitado' ? 'veiculo_quitado' : 'veiculo_financiando',
+      description: 'Veículo',
+      estimated_value: parseFloat(document.getElementById('obVeiculoValue')?.value) || null,
+      monthly_payment: veiculoVal === 'financiando' ? parseFloat(document.getElementById('obVeiculoPayment')?.value) || null : null,
+      installments_remaining: veiculoVal === 'financiando' ? parseInt(document.getElementById('obVeiculoMonths')?.value) || null : null,
+    });
+  }
+  document.querySelectorAll('.ob-asset-row').forEach(row => {
+    const val = parseFloat(row.querySelector('.ob-asset-value')?.value) || 0;
+    if (val > 0) {
+      assets.push({
+        asset_type: row.querySelector('.ob-asset-type')?.value || 'outro',
+        description: 'Investimento',
+        estimated_value: val,
+      });
+    }
+  });
+
+  // ── Coletar despesas variáveis médias ────────────────────────────────────
+  const variableExpenseAverages = {
+    alimentacao_fora: parseFloat(document.getElementById('obVarAlimentacao')?.value) || 0,
+    transporte: parseFloat(document.getElementById('obVarTransporte')?.value) || 0,
+    lazer: parseFloat(document.getElementById('obVarLazer')?.value) || 0,
+    vestuario: parseFloat(document.getElementById('obVarVestuario')?.value) || 0,
+    outros: parseFloat(document.getElementById('obVarOutros')?.value) || 0,
+  };
+
+  // ── Coletar dados PJ (se userType === 'pj') ──────────────────────────────
+  let pjData = null;
+  if (userType === 'pj') {
+    pjData = {
+      cnpj: document.getElementById('obPjCnpj')?.value.trim() || null,
+      regime_tributario: document.getElementById('obPjRegime')?.value || null,
+      business_type: document.getElementById('obPjBusinessType')?.value.trim() || null,
+      monthly_revenue_avg: parseFloat(document.getElementById('obPjRevenue')?.value) || null,
+      prolabore: parseFloat(document.getElementById('obPjProlabore')?.value) || null,
+      payroll_total: parseFloat(document.getElementById('obPjPayroll')?.value) || null,
+      tax_monthly: parseFloat(document.getElementById('obPjTax')?.value) || null,
+      operational_costs: parseFloat(document.getElementById('obPjOpCosts')?.value) || null,
+      partner_count: parseInt(document.getElementById('obPjPartners')?.value) || 1,
+    };
+  }
+
   return {
-    is_draft:              isDraft,
+    is_draft:              false,
     data_consent:          dataConsent,
+    user_type:             userType,
+    marital_status:        document.getElementById('obMaritalStatus')?.value || null,
+    dependents:            parseInt(document.getElementById('obDependents')?.value) || 0,
+    work_regime:           document.getElementById('obWorkRegime')?.value || null,
+    pj_data:               pjData,
     // Identificação
     name:                  document.getElementById("obName")?.value.trim() || "",
     age:                   parseInt(document.getElementById("obAge")?.value, 10) || null,
@@ -187,12 +318,18 @@ function collectOnboardingData(isDraft = false) {
     fixed_expenses_val:    fixedTotal,
     fixed_expenses_list:   fixedExpenses,
     variable_expenses_val: 0,
+    variable_expense_averages: variableExpenseAverages,
     // Objetivo
     goal_type:             goalType,
     goal_title:            goalTitle,
     goal_target_amount:    goalAmount,
     goal_target_date:      goalDate ? goalDate + "-01" : null,
     goal_current_amount:   goalCurrent,
+    // Novos
+    cards,
+    bank_accounts:         bankAccounts,
+    debts,
+    assets,
     // Perfil de investimento
     invests:               document.getElementById("obInvests")?.value || "nao_investe",
     investment_types:      selectedAssets,
@@ -209,37 +346,10 @@ function goalTypeDefaultTitle(type) {
   return map[type] || "Objetivo Financeiro";
 }
 
-async function saveOnboardingDraft() {
-  const data = collectOnboardingData(true);
-  const btnDraft = document.getElementById("btnObDraft");
-  if (btnDraft) btnDraft.textContent = "Salvando rascunho...";
-
-  try {
-    const res = await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || "Falha ao salvar rascunho.");
-    }
-
-    showOnboardingFeedback("Rascunho salvo com sucesso! Você pode continuar a qualquer momento.", "success");
-    setTimeout(() => {
-      toggleOnboardingModal(false);
-    }, 1500);
-  } catch (err) {
-    showOnboardingFeedback(err.message, "error");
-  } finally {
-    if (btnDraft) btnDraft.textContent = "Salvar rascunho e continuar depois";
-  }
-}
 
 async function submitOnboardingFinal() {
   if (!validateCurrentStep()) return;
-  const data = collectOnboardingData(false);
+  const data = collectOnboardingData();
   const btnSubmit = document.getElementById("btnObSubmit");
   if (btnSubmit) {
     btnSubmit.disabled = true;

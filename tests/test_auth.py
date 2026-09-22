@@ -168,31 +168,34 @@ def test_register_and_login_flow(client):
     assert resp_bad_csrf.status_code == 400
 
     # 5. Tentativa de login com senha incorreta
-    # Re-obter login page para pegar novo csrf
-    resp_lpage = client.get("/login")
-    login_csrf = resp_lpage.cookies[CSRF_COOKIE_NAME]
+    # Re-obter login page com cliente limpo (sem cookie de sessão do registro anterior)
+    from fastapi.testclient import TestClient as _TC
+    fresh_client = _TC(app)
+    resp_lpage = fresh_client.get("/login")
+    # Preferir cookie, senão extrair do HTML
+    login_csrf = resp_lpage.cookies.get(CSRF_COOKIE_NAME) or extract_csrf_token(resp_lpage.text)
     login_fail_data = {
         "csrf_token": login_csrf,
         "email": unique_email,
         "password": "senhaErrada123"
     }
-    resp_fail = client.post("/login", data=login_fail_data, follow_redirects=False)
+    resp_fail = fresh_client.post("/login", data=login_fail_data, follow_redirects=False)
     assert resp_fail.status_code == 401
 
     # 6. Login com credenciais válidas e CSRF válido
-    resp_lpage2 = client.get("/login")
-    login_csrf2 = resp_lpage2.cookies[CSRF_COOKIE_NAME]
+    resp_lpage2 = fresh_client.get("/login")
+    login_csrf2 = resp_lpage2.cookies.get(CSRF_COOKIE_NAME) or extract_csrf_token(resp_lpage2.text)
     login_success_data = {
         "csrf_token": login_csrf2,
         "email": unique_email,
         "password": "senhaForte#2026"
     }
-    resp_login = client.post("/login", data=login_success_data, follow_redirects=False)
+    resp_login = fresh_client.post("/login", data=login_success_data, follow_redirects=False)
     assert resp_login.status_code == 303
     assert SESSION_COOKIE_NAME in resp_login.cookies
 
     # 7. Logout limpa o cookie
-    resp_logout = client.post("/logout", follow_redirects=False)
+    resp_logout = fresh_client.post("/logout", follow_redirects=False)
     assert resp_logout.status_code == 303
     assert resp_logout.headers.get("Location") == "/login"
 

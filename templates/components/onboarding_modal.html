@@ -56,6 +56,111 @@
             <input type="text" id="obOccupation" class="lh-form-input" placeholder="Ex: Engenheiro de Software, Designer..." required>
           </div>
         </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obUserType" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Tipo de Pessoa *
+            </label>
+            <select id="obUserType" class="lh-form-input" onchange="handleUserTypeChange()" required>
+              <option value="pf">Pessoa Física (PF)</option>
+              <option value="pj">Pessoa Jurídica (PJ / MEI)</option>
+            </select>
+          </div>
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obMaritalStatus" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Estado Civil
+            </label>
+            <select id="obMaritalStatus" class="lh-form-input">
+              <option value="solteiro">Solteiro(a)</option>
+              <option value="casado">Casado(a)</option>
+              <option value="uniao_estavel">União Estável</option>
+              <option value="separado">Separado(a)</option>
+              <option value="divorciado">Divorciado(a)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obDependents" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Dependentes
+            </label>
+            <select id="obDependents" class="lh-form-input">
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5+</option>
+            </select>
+          </div>
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obWorkRegime" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Regime de Trabalho
+            </label>
+            <select id="obWorkRegime" class="lh-form-input">
+              <option value="clt">CLT</option>
+              <option value="pj_mei">PJ / MEI</option>
+              <option value="autonomo">Autônomo</option>
+              <option value="desempregado">Desempregado</option>
+              <option value="aposentado">Aposentado</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="pjSection" style="display: none; padding-top: 10px; border-top: 1px dashed var(--lh-border); margin-top: 14px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjCnpj" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">CNPJ (Opcional)</label>
+              <input type="text" id="obPjCnpj" class="lh-form-input" placeholder="00.000.000/0000-00">
+            </div>
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjRegime" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Regime Tributário</label>
+              <select id="obPjRegime" class="lh-form-input">
+                <option value="mei">MEI</option>
+                <option value="simples">Simples Nacional</option>
+                <option value="lucro_presumido">Lucro Presumido</option>
+                <option value="lucro_real">Lucro Real</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjBusinessType" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Tipo de Negócio</label>
+              <input type="text" id="obPjBusinessType" class="lh-form-input" placeholder="Ex: Agência, Consultoria...">
+            </div>
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjPartners" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Nº de Sócios</label>
+              <input type="number" id="obPjPartners" min="1" class="lh-form-input" value="1">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjRevenue" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Faturamento Bruto (R$)</label>
+              <input type="number" step="100" id="obPjRevenue" class="lh-form-input" placeholder="0">
+            </div>
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjProlabore" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Pró-labore (R$)</label>
+              <input type="number" step="100" id="obPjProlabore" class="lh-form-input" placeholder="0">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjPayroll" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Folha (R$)</label>
+              <input type="number" step="100" id="obPjPayroll" class="lh-form-input" placeholder="0">
+            </div>
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjTax" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Impostos (R$)</label>
+              <input type="number" step="100" id="obPjTax" class="lh-form-input" placeholder="0">
+            </div>
+            <div class="lh-form-group">
+              <label class="lh-form-label" for="obPjOpCosts" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">Custos Op. (R$)</label>
+              <input type="number" step="100" id="obPjOpCosts" class="lh-form-input" placeholder="0">
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ================================================================ -->
@@ -119,9 +224,102 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- ETAPA 3: Gastos Fixos Itemizados -->
+      <!-- ETAPA 3: Cartões & Contas -->
       <!-- ================================================================ -->
       <div class="onboarding-step" id="step3" style="display: none;">
+        <p style="font-size: 0.82rem; color: var(--lh-text-muted); margin-bottom: 12px;">
+          Informe seus cartões e contas bancárias para rastrearmos faturas e saldo.
+          Se não tiver, avance sem preencher.
+        </p>
+        
+        <strong style="font-size: 0.83rem;">💳 Cartões de Crédito</strong>
+        <div id="obCardList" style="display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px;">
+          <!-- Linhas adicionadas por addCardRow() -->
+        </div>
+        <button type="button" onclick="addCardRow()" style="width:100%; border:1px dashed var(--lh-border); background:transparent; color:var(--lh-primary); padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem; margin-bottom:16px;">+ Adicionar cartão</button>
+
+        <strong style="font-size: 0.83rem;">🏦 Contas Bancárias</strong>
+        <div id="obAccountList" style="display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px;">
+          <!-- Linhas adicionadas por addAccountRow() -->
+        </div>
+        <button type="button" onclick="addAccountRow()" style="width:100%; border:1px dashed var(--lh-border); background:transparent; color:var(--lh-primary); padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem;">+ Adicionar conta</button>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ETAPA 4: Dívidas -->
+      <!-- ================================================================ -->
+      <div class="onboarding-step" id="step4" style="display: none;">
+        <p style="font-size: 0.82rem; color: var(--lh-text-muted); margin-bottom: 10px;">
+          Liste suas dívidas ativas. A IA usará isso para calcular seu custo real mensal e sugerir prioridades de quitação.
+        </p>
+        
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.84rem; margin-bottom:12px; cursor:pointer;">
+          <input type="checkbox" id="obNoDebts" onchange="toggleDebtSection()" style="width:16px;height:16px;accent-color:#1E56A0;">
+          Não tenho dívidas ativas no momento
+        </label>
+        
+        <div id="obDebtSection">
+          <div id="obDebtList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+            <!-- Linhas adicionadas por addDebtRow() -->
+          </div>
+          <button type="button" onclick="addDebtRow()" style="width:100%; border:1px dashed var(--lh-border); background:transparent; color:var(--lh-primary); padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem; margin-bottom:12px;">+ Adicionar dívida</button>
+          <div style="display:flex; justify-content:space-between; padding:8px 12px; background:rgba(100,116,139,0.08); border-radius:6px; font-size:0.82rem;">
+            <span style="color:var(--lh-text-muted);">Total mensal em dívidas:</span>
+            <strong id="obDebtsTotal" style="color:#ef4444;">R$ 0,00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ETAPA 5: Patrimônio -->
+      <!-- ================================================================ -->
+      <div class="onboarding-step" id="step5" style="display: none;">
+        <p style="font-size: 0.82rem; color: var(--lh-text-muted); margin-bottom: 14px;">
+          Seu patrimônio ajuda a IA a entender sua situação real e fazer projeções mais precisas.
+        </p>
+        
+        <!-- Imóvel -->
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.83rem; font-weight:600; display:block; margin-bottom:8px;">🏠 Imóvel</label>
+          <select id="obImovel" class="lh-form-input" onchange="toggleImovelFields()" style="cursor:pointer;">
+            <option value="nenhum">Não tenho imóvel</option>
+            <option value="proprio_quitado">Tenho imóvel próprio (quitado)</option>
+            <option value="financiando">Estou financiando um imóvel</option>
+          </select>
+          <div id="obImovelFields" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <div><label style="font-size:0.76rem; color:var(--lh-text-muted);">Valor estimado (R$)</label><input type="number" step="1000" id="obImovelValue" class="lh-form-input" placeholder="Ex: 350000"></div>
+            <div id="obImovelFinancFields" style="display:none;"><label style="font-size:0.76rem; color:var(--lh-text-muted);">Parcela (R$)</label><input type="number" step="0.01" id="obImovelPayment" class="lh-form-input" placeholder="0.00"></div>
+            <div id="obImovelMonthsDiv" style="display:none;"><label style="font-size:0.76rem; color:var(--lh-text-muted);">Meses restantes</label><input type="number" id="obImovelMonths" class="lh-form-input" placeholder="0"></div>
+          </div>
+        </div>
+        
+        <!-- Veículo -->
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.83rem; font-weight:600; display:block; margin-bottom:8px;">🚗 Veículo</label>
+          <select id="obVeiculo" class="lh-form-input" onchange="toggleVeiculoFields()" style="cursor:pointer;">
+            <option value="nenhum">Não tenho veículo</option>
+            <option value="proprio_quitado">Tenho veículo próprio (quitado)</option>
+            <option value="financiando">Estou financiando um veículo</option>
+          </select>
+          <div id="obVeiculoFields" style="display:none; margin-top:10px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <div><label style="font-size:0.76rem; color:var(--lh-text-muted);">Valor estimado (R$)</label><input type="number" step="1000" id="obVeiculoValue" class="lh-form-input" placeholder="Ex: 45000"></div>
+            <div id="obVeiculoFinancFields" style="display:none;"><label style="font-size:0.76rem; color:var(--lh-text-muted);">Parcela (R$)</label><input type="number" step="0.01" id="obVeiculoPayment" class="lh-form-input" placeholder="0.00"></div>
+            <div id="obVeiculoMonthsDiv" style="display:none;"><label style="font-size:0.76rem; color:var(--lh-text-muted);">Meses restantes</label><input type="number" id="obVeiculoMonths" class="lh-form-input" placeholder="0"></div>
+          </div>
+        </div>
+        
+        <!-- Investimentos já existentes -->
+        <div>
+          <label style="font-size:0.83rem; font-weight:600; display:block; margin-bottom:8px;">📈 Investimentos Existentes (além da poupança já informada na renda)</label>
+          <div id="obAssetInvestList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;"></div>
+          <button type="button" onclick="addAssetRow()" style="width:100%; border:1px dashed var(--lh-border); background:transparent; color:var(--lh-primary); padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem;">+ Adicionar investimento</button>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ETAPA 6: Gastos Fixos Itemizados -->
+      <!-- ================================================================ -->
+      <div class="onboarding-step" id="step6" style="display: none;">
         <p style="font-size: 0.82rem; color: var(--lh-text-muted); margin-bottom: 12px;">
           Liste seus gastos fixos mensais — quanto mais detalhar, mais precisa será a análise da IA.
         </p>
@@ -171,9 +369,44 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- ETAPA 4: Objetivo Financeiro Principal -->
+      <!-- ETAPA 7: Despesas Variáveis Médias -->
       <!-- ================================================================ -->
-      <div class="onboarding-step" id="step4" style="display: none;">
+      <div class="onboarding-step" id="step7" style="display: none;">
+        <p style="font-size: 0.82rem; color: var(--lh-text-muted); margin-bottom: 14px;">
+          Informe uma média mensal de gastos variáveis. Você poderá ajustar isso a qualquer momento no dashboard.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;">
+            <label style="font-size:0.84rem;">🍽️ Alimentação fora / delivery</label>
+            <input type="number" step="10" id="obVarAlimentacao" class="lh-form-input" style="width:120px;" placeholder="R$ 0" oninput="updateVarTotal()">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;">
+            <label style="font-size:0.84rem;">🚗 Transporte (além do benefício)</label>
+            <input type="number" step="10" id="obVarTransporte" class="lh-form-input" style="width:120px;" placeholder="R$ 0" oninput="updateVarTotal()">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;">
+            <label style="font-size:0.84rem;">🎮 Lazer / entretenimento</label>
+            <input type="number" step="10" id="obVarLazer" class="lh-form-input" style="width:120px;" placeholder="R$ 0" oninput="updateVarTotal()">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;">
+            <label style="font-size:0.84rem;">👕 Vestuário / pessoal / higiene</label>
+            <input type="number" step="10" id="obVarVestuario" class="lh-form-input" style="width:120px;" placeholder="R$ 0" oninput="updateVarTotal()">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;">
+            <label style="font-size:0.84rem;">📦 Outros imprevistos</label>
+            <input type="number" step="10" id="obVarOutros" class="lh-form-input" style="width:120px;" placeholder="R$ 0" oninput="updateVarTotal()">
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding:10px 12px; background:rgba(100,116,139,0.08); border-radius:6px; font-size:0.82rem; margin-top:14px;">
+          <span style="color:var(--lh-text-muted);">Total variável estimado:</span>
+          <strong id="obVarTotal" style="color:#f59e0b;">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ETAPA 8: Objetivo Financeiro Principal -->
+      <!-- ================================================================ -->
+      <div class="onboarding-step" id="step8" style="display: none;">
         <div class="lh-form-group" style="margin-bottom: 14px;">
           <label class="lh-form-label" for="obGoalType" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
             Qual é seu objetivo financeiro principal? *
@@ -222,9 +455,9 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- ETAPA 5: Investimentos & Perfil de Risco -->
+      <!-- ETAPA 9: Investimentos & Perfil de Risco -->
       <!-- ================================================================ -->
-      <div class="onboarding-step" id="step5" style="display: none;">
+      <div class="onboarding-step" id="step9" style="display: none;">
         <div class="lh-form-group" style="margin-bottom: 14px;">
           <label class="lh-form-label" for="obInvests" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
             Você já investe ou tem interesse em investir? *
@@ -329,10 +562,6 @@
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center;">
-          <button type="button" id="btnObDraft" class="lh-btn lh-btn-sm" onclick="saveOnboardingDraft()" style="color: var(--lh-text-muted);">
-            Salvar rascunho
-          </button>
-
           <button type="button" id="btnObNext" onclick="onboardingNextStep()"
                   style="padding: 10px 20px; background: #1E56A0; color: #fff; border: none; border-radius: 6px; font-size: 0.88rem; font-weight: 600; cursor: pointer;">
             Próximo →
@@ -472,5 +701,148 @@ function toggleInvestmentFields() {
   const hideInvestment = val === 'nao_investe';
   if (fields)    fields.style.display    = hideInvestment ? 'none' : 'block';
   if (noInvest)  noInvest.style.display  = hideInvestment ? 'block' : 'none';
+}
+
+// ── Cartões ─────────────────────────────────────────────────────────────
+function addCardRow() {
+  const list = document.getElementById('obCardList');
+  const row = document.createElement('div');
+  row.className = 'ob-card-row';
+  row.style.cssText = 'display:grid; grid-template-columns:2fr 0.7fr 0.7fr 1fr 1fr auto; gap:6px; align-items:end;';
+  row.innerHTML = `
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Nome do cartão</label>
+    <input type="text" class="lh-form-input ob-card-name" placeholder="Ex: Nubank" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Fecha dia</label>
+    <input type="number" min="1" max="31" class="lh-form-input ob-card-closing" placeholder="4" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Vence dia</label>
+    <input type="number" min="1" max="31" class="lh-form-input ob-card-due" placeholder="11" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Limite (R$)</label>
+    <input type="number" step="100" class="lh-form-input ob-card-limit" placeholder="0" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Gasto atual ciclo (R$)</label>
+    <input type="number" step="0.01" class="lh-form-input ob-card-balance" placeholder="0" style="font-size:0.84rem;"></div>
+    <div style="padding-bottom:2px;">
+    <button type="button" onclick="this.closest('.ob-card-row').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;padding:6px;">✕</button></div>`;
+  list.appendChild(row);
+}
+
+// ── Contas ─────────────────────────────────────────────────────────────
+function addAccountRow() {
+  const list = document.getElementById('obAccountList');
+  const row = document.createElement('div');
+  row.className = 'ob-account-row';
+  row.style.cssText = 'display:grid; grid-template-columns:2fr 1.5fr 1fr auto; gap:6px; align-items:end;';
+  row.innerHTML = `
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Banco</label>
+    <input type="text" class="lh-form-input ob-account-bank" placeholder="Ex: Nubank, Bradesco" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Tipo</label>
+    <select class="lh-form-input ob-account-type" style="font-size:0.82rem;cursor:pointer;">
+      <option value="corrente">Conta Corrente</option>
+      <option value="poupanca">Poupança</option>
+      <option value="digital">Conta Digital</option>
+      <option value="salario">Conta Salário</option>
+    </select></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Saldo aprox (R$)</label>
+    <input type="number" step="100" class="lh-form-input ob-account-balance" placeholder="0" style="font-size:0.84rem;"></div>
+    <div style="padding-bottom:2px;">
+    <button type="button" onclick="this.closest('.ob-account-row').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;padding:6px;">✕</button></div>`;
+  list.appendChild(row);
+}
+
+// ── Dívidas ─────────────────────────────────────────────────────────────
+function toggleDebtSection() {
+  const noDebts = document.getElementById('obNoDebts')?.checked;
+  const section = document.getElementById('obDebtSection');
+  if (section) section.style.display = noDebts ? 'none' : 'block';
+}
+
+function addDebtRow() {
+  const list = document.getElementById('obDebtList');
+  const row = document.createElement('div');
+  row.className = 'ob-debt-row';
+  row.style.cssText = 'display:grid; grid-template-columns:2fr 1.5fr 1fr 1fr 0.8fr 0.8fr auto; gap:6px; align-items:end;';
+  row.innerHTML = `
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Descrição</label>
+    <input type="text" class="lh-form-input ob-debt-desc" placeholder="Ex: Empréstimo Banco" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Tipo</label>
+    <select class="lh-form-input ob-debt-type" style="font-size:0.82rem;cursor:pointer;">
+      <option value="cartao_rotativo">💳 Cartão rotativo</option>
+      <option value="emprestimo_pessoal">💰 Empréstimo pessoal</option>
+      <option value="financiamento_veiculo">🚗 Financiamento veículo</option>
+      <option value="financiamento_imovel">🏠 Financiamento imóvel</option>
+      <option value="consignado">📋 Consignado</option>
+      <option value="outro">📦 Outro</option>
+    </select></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Valor total (R$)</label>
+    <input type="number" step="100" class="lh-form-input ob-debt-total" placeholder="0" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Parcela/mês (R$)</label>
+    <input type="number" step="0.01" class="lh-form-input ob-debt-payment" placeholder="0" style="font-size:0.84rem;" oninput="updateDebtsTotal()"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Parcelas restantes</label>
+    <input type="number" class="lh-form-input ob-debt-installments" placeholder="∞" style="font-size:0.84rem;"></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Juros %/mês</label>
+    <input type="number" step="0.01" class="lh-form-input ob-debt-interest" placeholder="0.00" style="font-size:0.84rem;"></div>
+    <div style="padding-bottom:2px;">
+    <button type="button" onclick="this.closest('.ob-debt-row').remove(); updateDebtsTotal();" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;padding:6px;">✕</button></div>`;
+  list.appendChild(row);
+}
+
+function updateDebtsTotal() {
+  let total = 0;
+  document.querySelectorAll('.ob-debt-payment').forEach(el => total += parseFloat(el.value) || 0);
+  const el = document.getElementById('obDebtsTotal');
+  if (el) el.textContent = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ── Patrimônio ─────────────────────────────────────────────────────────
+function toggleImovelFields() {
+  const val = document.getElementById('obImovel')?.value;
+  const fields = document.getElementById('obImovelFields');
+  const financFields = document.getElementById('obImovelFinancFields');
+  const monthsDiv = document.getElementById('obImovelMonthsDiv');
+  if (!fields) return;
+  fields.style.display = val === 'nenhum' ? 'none' : 'grid';
+  const isFinanc = val === 'financiando';
+  if (financFields) financFields.style.display = isFinanc ? 'block' : 'none';
+  if (monthsDiv) monthsDiv.style.display = isFinanc ? 'block' : 'none';
+}
+
+function toggleVeiculoFields() {
+  const val = document.getElementById('obVeiculo')?.value;
+  const fields = document.getElementById('obVeiculoFields');
+  const financFields = document.getElementById('obVeiculoFinancFields');
+  const monthsDiv = document.getElementById('obVeiculoMonthsDiv');
+  if (!fields) return;
+  fields.style.display = val === 'nenhum' ? 'none' : 'grid';
+  const isFinanc = val === 'financiando';
+  if (financFields) financFields.style.display = isFinanc ? 'block' : 'none';
+  if (monthsDiv) monthsDiv.style.display = isFinanc ? 'block' : 'none';
+}
+
+function addAssetRow() {
+  const list = document.getElementById('obAssetInvestList');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid; grid-template-columns:2fr 1fr auto; gap:8px; align-items:end;';
+  row.className = 'ob-asset-row';
+  row.innerHTML = `
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Tipo</label>
+    <select class="lh-form-input ob-asset-type" style="font-size:0.82rem;cursor:pointer;">
+      <option value="poupanca">💰 Poupança</option>
+      <option value="cdb_renda_fixa">📈 CDB / Renda Fixa</option>
+      <option value="acoes">📊 Ações</option>
+      <option value="fii">🏢 FIIs</option>
+      <option value="criptoativos">₿ Criptoativos</option>
+      <option value="outro">📦 Outro</option>
+    </select></div>
+    <div><label style="font-size:0.75rem;color:var(--lh-text-muted);">Valor (R$)</label>
+    <input type="number" step="100" class="lh-form-input ob-asset-value" placeholder="0" style="font-size:0.84rem;"></div>
+    <div style="padding-bottom:2px;">
+    <button type="button" onclick="this.closest('.ob-asset-row').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;padding:6px;">✕</button></div>`;
+  list.appendChild(row);
+}
+
+function updateVarTotal() {
+  const ids = ['obVarAlimentacao','obVarTransporte','obVarLazer','obVarVestuario','obVarOutros'];
+  let total = ids.reduce((s, id) => s + (parseFloat(document.getElementById(id)?.value) || 0), 0);
+  const el = document.getElementById('obVarTotal');
+  if (el) el.textContent = 'R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 </script>

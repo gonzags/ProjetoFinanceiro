@@ -68,9 +68,9 @@ class ConsensusExecutionResult(BaseModel):
 # -----------------------------------------------------------------------------
 
 class CircuitBreaker:
-    """Gerencia falhas de 429 e timeout por provedor, isolando-os por 60 segundos."""
+    """Gerencia falhas de 429 e timeout por provedor, isolando-os por 30 segundos."""
     
-    def __init__(self, cooldown_seconds: float = 60.0):
+    def __init__(self, cooldown_seconds: float = 30.0):
         self.cooldown_seconds = cooldown_seconds
         # provider_id -> timestamp até o qual o provedor está em cooldown
         self.cooldown_until: Dict[str, float] = {}
@@ -344,24 +344,117 @@ class ConsensusEngine:
         return converged, max_div
 
     def _build_prompt(self, financial_summary: Dict[str, Any]) -> str:
-        """Cria o prompt estruturado de deliberação orçamentária."""
-        income = financial_summary.get("total_income", 2133.42)
-        fixed = financial_summary.get("fixed_costs", 285.00)
-        debts = financial_summary.get("debts_total", 1236.83)
-        special = financial_summary.get("special_events", 500.00)
-        surplus = financial_summary.get("net_surplus", 111.59)
-        month = financial_summary.get("month", "Outubro")
+        """Cria o prompt estruturado de deliberação orçamentária com perfil completo."""
+        income = financial_summary.get("total_income", 0)
+        fixed = financial_summary.get("fixed_costs", 0)
+        surplus = financial_summary.get("net_surplus", 0)
+        month = financial_summary.get("month", "Mês atual")
 
-        return (
-            f"Analise o fluxo financeiro para o mês de {month}:\n"
-            f"- Renda Líquida Total: R$ {income:.2f}\n"
-            f"- Custos Fixos Essenciais: R$ {fixed:.2f}\n"
-            f"- Dívidas em Cartão/Parcelamentos: R$ {debts:.2f}\n"
-            f"- Eventos Especiais/Compromissos Extras: R$ {special:.2f}\n"
-            f"- Sobra Líquida Prevista: R$ {surplus:.2f}\n\n"
-            f"Determine a alocação percentual recomendada entre: 'necessidades', 'desejos' e 'futuro' (soma = 100.0). "
-            f"Indique o índice de confiança (0.0 a 1.0), liste flags de risco específicas e sintetize o parecer em até 300 caracteres."
-        )
+        lines = [
+            f"Analise o perfil financeiro completo para o mês de {month}:",
+            "",
+            "## RENDA",
+        ]
+
+        # Fontes de renda detalhadas (se disponíveis)
+        income_list = financial_summary.get("income_list", [])
+        if income_list:
+            for src in income_list:
+                name = src.get("name", "Fonte")
+                amount = src.get("amount", 0)
+                months_rem = src.get("months_remaining")
+                duracao = f"(temporária — {months_rem} meses restantes)" if months_rem else "(permanente)"
+                lines.append(f"- {name}: R$ {amount:.2f} {duracao}")
+        else:
+            lines.append(f"- Renda total: R$ {income:.2f}")
+        lines.append(f"- **Total líquido: R$ {income:.2f}**")
+
+        # Gastos fixos
+        lines += ["", "## GASTOS FIXOS"]
+        lines.append(f"- Total custos fixos essenciais: R$ {fixed:.2f}")
+
+        # Dívidas detalhadas
+        debts_detail = financial_summary.get("debts_detail", [])
+        debts_total = financial_summary.get("debts_total", 0)
+        if debts_detail:
+            lines += ["", "## DÍVIDAS ATIVAS"]
+            for d in debts_detail:
+                desc = d.get("description", "Dívida")
+                payment = d.get("monthly_payment", 0)
+                installments = d.get("installments_remaining")
+                rate = d.get("interest_rate_monthly")
+                prazo = f"{installments} meses restantes" if installments else "prazo indefinido"
+                juros = f", juros {rate:.1f}%/mês" if rate else ""
+                lines.append(f"- {desc}: R$ {payment:.2f}/mês ({prazo}{juros})")
+            lines.append(f"- **Total mensal em dívidas: R$ {debts_total:.2f}**")
+        elif debts_total > 0:
+            lines += ["", f"## DÍVIDAS\n- Total mensal: R$ {debts_total:.2f}"]
+
+        # Despesas variáveis médias
+        var_avg = financial_summary.get("variable_averages", {})
+        if var_avg and any(v > 0 for v in var_avg.values()):
+            lines += ["", "## DESPESAS VARIÁVEIS MÉDIAS MENSAIS"]
+            labels = {
+                "alimentacao_fora": "Alimentação fora/delivery",
+                "transporte": "Transporte",
+                "lazer": "Lazer/entretenimento",
+                "vestuario": "Vestuário/pessoal",
+                "outros": "Outros imprevistos",
+            }
+            total_var = 0
+            for cat, label in labels.items():
+                val = var_avg.get(cat, 0)
+                if val > 0:
+                    lines.append(f"- {label}: R$ {val:.2f}")
+                    total_var += val
+            lines.append(f"- **Total variável: R$ {total_var:.2f}**")
+
+        # Patrimônio / ativos
+        assets = financial_summary.get("assets", [])
+        if assets:
+            lines += ["", "## PATRIMÔNIO"]
+            for a in assets:
+                asset_type = a.get("asset_type", "bem")
+                value = a.get("estimated_value") or a.get("financed_value") or 0
+                desc = a.get("description") or asset_type
+                lines.append(f"- {desc}: R$ {value:,.2f}")
+
+        # Cartões de crédito
+        cards = financial_summary.get("credit_cards", [])
+        if cards:
+            lines += ["", "## CARTÕES DE CRÉDITO (ciclo atual)"]
+            for c in cards:
+                name = c.get("name", "Cartão")
+                balance = c.get("current_balance", 0)
+                limit = c.get("credit_limit", 0)
+                pct = (balance / limit * 100) if limit > 0 else 0
+                lines.append(f"- {name}: R$ {balance:.2f} gastos de R$ {limit:.2f} ({pct:.1f}% do limite)")
+
+        # Sobra líquida
+        lines += ["", f"## RESULTADO\n- Sobra líquida prevista: R$ {surplus:.2f}"]
+
+        # Histórico de portfólios anteriores
+        portfolio_history = financial_summary.get("portfolio_history", [])
+        if portfolio_history:
+            lines += ["", "## HISTÓRICO (meses anteriores para contexto)"]
+            for ph in portfolio_history[:3]:
+                created = ph.get("created_at", "")[:7] if ph.get("created_at") else "?"
+                alloc = ph.get("allocation", {})
+                nec = alloc.get("necessidades", 0)
+                des = alloc.get("desejos", 0)
+                fut = alloc.get("futuro", 0)
+                lines.append(f"- {created}: Necessidades {nec:.0f}% | Desejos {des:.0f}% | Futuro {fut:.0f}%")
+
+        lines += [
+            "",
+            "## TAREFA",
+            "Determine a alocação percentual recomendada entre: 'necessidades', 'desejos' e 'futuro' (soma = 100.0).",
+            "Considere as fontes de renda temporárias ao fazer projeções.",
+            "Indique o índice de confiança (0.0 a 1.0), liste flags de risco específicas em português e sintetize o parecer em até 300 caracteres.",
+            "Responda SOMENTE em JSON válido sem markdown."
+        ]
+
+        return "\n".join(lines)
 
     async def run_consensus_loop(
         self,
@@ -411,15 +504,33 @@ class ConsensusEngine:
         for r_idx, group in enumerate(round_groups):
             rounds_run = r_idx + 1
             tasks = []
+            available_in_group = []
             for pid in group:
                 provider = self.providers.get(pid)
-                if provider and provider.is_configured() and self.circuit_breaker.is_available(pid):
-                    tasks.append(provider.generate(prompt, financial_summary, timeout=self.timeout_sec))
+                if not provider:
+                    logger.debug(f"Rodada {rounds_run}: [{pid}] não encontrado em providers.")
+                    continue
+                if not provider.is_configured():
+                    logger.debug(f"Rodada {rounds_run}: [{pid}] sem API key configurada — ignorado.")
+                    continue
+                if not self.circuit_breaker.is_available(pid):
+                    logger.warning(f"Rodada {rounds_run}: [{pid}] em cooldown — ignorado.")
+                    continue
+                available_in_group.append(pid)
+                tasks.append(provider.generate(prompt, financial_summary, timeout=self.timeout_sec))
+
+            logger.info(f"Rodada {rounds_run}: tentando {available_in_group or 'nenhum disponível'} do grupo {group}")
 
             if tasks:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                valid_this_round = [r for r in results if isinstance(r, LLMResponse)]
+                valid_this_round = []
+                for res in results:
+                    if isinstance(res, LLMResponse):
+                        valid_this_round.append(res)
+                    elif isinstance(res, Exception):
+                        logger.warning(f"Rodada {rounds_run}: exceção em gather: {type(res).__name__} — {res}")
                 all_collected_responses.extend(valid_this_round)
+                logger.info(f"Rodada {rounds_run}: {len(valid_this_round)}/{len(tasks)} respostas válidas. Total acumulado: {len(all_collected_responses)}")
 
                 # Verifica convergência com as respostas obtidas até esta rodada
                 if len(all_collected_responses) >= 2:
@@ -429,7 +540,7 @@ class ConsensusEngine:
                         logger.info(f"Convergência atingida na Rodada {rounds_run} (divergência={div:.1f}%).")
                         break
             else:
-                logger.debug(f"Rodada {rounds_run}: Nenhum provedor disponível no grupo {group}.")
+                logger.warning(f"Rodada {rounds_run}: nenhum provedor disponível no grupo {group}. Pulando.")
 
         # Se nenhum provedor respondeu (ou nenhum configurado), ativar Fallback Determinístico Local
         if not all_collected_responses:

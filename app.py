@@ -191,6 +191,58 @@ class OnboardingInput(BaseModel):
     invests: Optional[str] = None
     investment_types: Optional[List[str]] = None
     risk_tolerance: Optional[str] = None
+
+class CreditCardInput(BaseModel):
+    name: str
+    bank: Optional[str] = None
+    closing_day: int
+    due_day: int
+    credit_limit: float = 0.0
+    current_balance: float = 0.0
+
+class BankAccountInput(BaseModel):
+    bank_name: str
+    account_type: str = 'corrente'
+    balance_approx: float = 0.0
+
+class UserDebtInput(BaseModel):
+    description: str
+    debt_type: str
+    total_amount: float
+    monthly_payment: float
+    installments_remaining: Optional[int] = None
+    interest_rate_monthly: Optional[float] = None
+    credit_score_approx: Optional[str] = None
+
+class UserAssetInput(BaseModel):
+    asset_type: str
+    description: Optional[str] = None
+    estimated_value: Optional[float] = None
+    financed_value: Optional[float] = None
+    monthly_payment: Optional[float] = None
+    installments_remaining: Optional[int] = None
+
+class VariableAveragesInput(BaseModel):
+    alimentacao_fora: float = 0.0
+    transporte: float = 0.0
+    lazer: float = 0.0
+    vestuario: float = 0.0
+    outros: float = 0.0
+
+class PJProfileInput(BaseModel):
+    cnpj: Optional[str] = None
+    regime_tributario: Optional[str] = None
+    business_type: Optional[str] = None
+    monthly_revenue_avg: Optional[float] = None
+    prolabore: Optional[float] = None
+    payroll_total: Optional[float] = None
+    tax_monthly: Optional[float] = None
+    operational_costs: Optional[float] = None
+    partner_count: int = 1
+
+class CardBalancePatchInput(BaseModel):
+    current_balance: float
+
 class ExpenseCategoryInput(BaseModel):
     name: str
     category: str
@@ -649,6 +701,25 @@ async def index_page(request: Request):
         greeting = "Bem-vindo ao Ledger Horizon!"
         summary = None   # JS mostrará estado vazio, não seed
 
+
+    # Calcular horizon do objetivo real
+    target_liberty = "—"
+    months_remaining = "—"
+    if user and user.get('onboarding_completed'):
+        active_goal = None
+        if hasattr(db_manager, 'get_active_goal'):
+            active_goal = await db_manager.get_active_goal(user['id'])
+        if active_goal and active_goal.get('target_date'):
+            from datetime import date
+            target_dt = active_goal['target_date']
+            if hasattr(target_dt, 'date'):
+                target_dt = target_dt.date()
+            today = date.today()
+            months_remaining = max(0, (target_dt.year - today.year)*12 + (target_dt.month - today.month))
+            month_names = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                           'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+            target_liberty = f"{month_names[target_dt.month-1]} de {target_dt.year}"
+
     status_badge = db_manager.get_connection_status()
 
     return templates.TemplateResponse(
@@ -664,8 +735,8 @@ async def index_page(request: Request):
             "current_year": now.year,
             "current_month": now.month,
             "enable_auth": ENABLE_AUTH,
-            "target_liberty": "—",
-            "months_remaining": "—",
+            "target_liberty": target_liberty,
+            "months_remaining": months_remaining,
         }
     )
 
@@ -727,6 +798,19 @@ async def get_consensus(request: Request, month: str = "Outubro"):
     user = await get_request_user(request)
     uid = user["id"] if user else None
     summary = await db_manager.get_financial_summary(month, user_id=uid)
+    
+    if user and user.get('onboarding_completed'):
+        try:
+            full_profile = await db_manager.get_complete_financial_profile(uid)
+            summary['income_list'] = full_profile.get('profile', {}).get('income_list', [])
+            summary['debts_detail'] = full_profile.get('debts', [])
+            summary['assets'] = full_profile.get('assets', [])
+            summary['variable_averages'] = full_profile.get('variable_averages', {})
+            summary['credit_cards'] = full_profile.get('credit_cards', [])
+            debts_monthly = sum(d.get('monthly_payment', 0) for d in full_profile.get('debts', []))
+            summary['debts_total'] = debts_monthly
+        except Exception as e:
+            logger.warning(f"Não foi possível enriquecer financial_summary: {e}")
     result = await consensus_engine.run_consensus_loop(summary, force_recalculate=False, user_id=uid)
     return result.model_dump()
 
@@ -741,6 +825,19 @@ async def recalculate_consensus(request: Request, month: str = "Outubro"):
     user = await get_request_user(request)
     uid = user["id"] if user else None
     summary = await db_manager.get_financial_summary(month, user_id=uid)
+    
+    if user and user.get('onboarding_completed'):
+        try:
+            full_profile = await db_manager.get_complete_financial_profile(uid)
+            summary['income_list'] = full_profile.get('profile', {}).get('income_list', [])
+            summary['debts_detail'] = full_profile.get('debts', [])
+            summary['assets'] = full_profile.get('assets', [])
+            summary['variable_averages'] = full_profile.get('variable_averages', {})
+            summary['credit_cards'] = full_profile.get('credit_cards', [])
+            debts_monthly = sum(d.get('monthly_payment', 0) for d in full_profile.get('debts', []))
+            summary['debts_total'] = debts_monthly
+        except Exception as e:
+            logger.warning(f"Não foi possível enriquecer financial_summary: {e}")
     result = await consensus_engine.run_consensus_loop(summary, force_recalculate=True, user_id=uid)
     return result.model_dump()
 
@@ -1029,3 +1126,183 @@ async def get_forecast(months: int, request: Request):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="127.0.0.1", port=8200, reload=True)
+
+
+
+# ── Cartões ────────────────────────────────────────────────────────────────
+@app.get("/api/profile/cards")
+async def get_cards(request: Request):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    cards = await db_manager.get_credit_cards(user['id'])
+    return JSONResponse(cards)
+
+@app.post("/api/profile/cards")
+async def create_card(request: Request, body: CreditCardInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    card = await db_manager.upsert_credit_card(user['id'], body.model_dump())
+    return JSONResponse(card, status_code=201)
+
+@app.patch("/api/profile/cards/{card_id}")
+async def patch_card_balance(request: Request, card_id: str, body: CardBalancePatchInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    ok = await db_manager.patch_credit_card_balance(user['id'], card_id, body.current_balance)
+    if not ok:
+        return JSONResponse({'error': 'not found'}, status_code=404)
+    return JSONResponse({'ok': True})
+
+@app.delete("/api/profile/cards/{card_id}")
+async def delete_card(request: Request, card_id: str):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    ok = await db_manager.delete_credit_card(user['id'], card_id)
+    return JSONResponse({'ok': ok})
+
+# ── Contas Bancárias ────────────────────────────────────────────────────────
+@app.get("/api/profile/accounts")
+async def get_accounts(request: Request):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    accounts = await db_manager.get_bank_accounts(user['id'])
+    return JSONResponse(accounts)
+
+@app.post("/api/profile/accounts")
+async def create_account(request: Request, body: BankAccountInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    account = await db_manager.upsert_bank_account(user['id'], body.model_dump())
+    return JSONResponse(account, status_code=201)
+
+@app.delete("/api/profile/accounts/{acct_id}")
+async def delete_account(request: Request, acct_id: str):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    ok = await db_manager.delete_bank_account(user['id'], acct_id)
+    return JSONResponse({'ok': ok})
+
+# ── Dívidas ────────────────────────────────────────────────────────────────
+@app.get("/api/profile/debts")
+async def get_debts(request: Request):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    debts = await db_manager.get_user_debts(user['id'])
+    return JSONResponse(debts)
+
+@app.post("/api/profile/debts")
+async def create_debt(request: Request, body: UserDebtInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    debt = await db_manager.upsert_user_debt(user['id'], body.model_dump())
+    return JSONResponse(debt, status_code=201)
+
+@app.delete("/api/profile/debts/{debt_id}")
+async def delete_debt(request: Request, debt_id: str):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    ok = await db_manager.delete_user_debt(user['id'], debt_id)
+    return JSONResponse({'ok': ok})
+
+# ── Patrimônio ─────────────────────────────────────────────────────────────
+@app.get("/api/profile/assets")
+async def get_assets(request: Request):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    assets = await db_manager.get_user_assets(user['id'])
+    return JSONResponse(assets)
+
+@app.post("/api/profile/assets")
+async def create_asset(request: Request, body: UserAssetInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    asset = await db_manager.upsert_user_asset(user['id'], body.model_dump())
+    return JSONResponse(asset, status_code=201)
+
+@app.delete("/api/profile/assets/{asset_id}")
+async def delete_asset(request: Request, asset_id: str):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    ok = await db_manager.delete_user_asset(user['id'], asset_id)
+    return JSONResponse({'ok': ok})
+
+# ── Despesas Variáveis Médias ─────────────────────────────────────────────
+@app.get("/api/profile/variable-averages")
+async def get_variable_averages(request: Request):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    averages = await db_manager.get_variable_expense_averages(user['id'])
+    return JSONResponse(averages)
+
+@app.put("/api/profile/variable-averages")
+async def update_variable_averages(request: Request, body: VariableAveragesInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    await db_manager.save_variable_expense_averages(user['id'], body.model_dump())
+    return JSONResponse({'ok': True})
+
+# ── Perfil PJ ─────────────────────────────────────────────────────────────
+@app.get("/api/profile/pj")
+async def get_pj(request: Request):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    pj = await db_manager.get_pj_profile(user['id'])
+    return JSONResponse(pj or {})
+
+@app.put("/api/profile/pj")
+async def update_pj(request: Request, body: PJProfileInput):
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    await db_manager.save_pj_profile(user['id'], body.model_dump())
+    return JSONResponse({'ok': True})

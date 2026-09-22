@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -175,6 +176,64 @@ class InvestmentPortfolio(BaseModel):
 
 
 # -----------------------------------------------------------------------------
+
+class CreditCard(BaseModel):
+    id: Optional[str] = None
+    name: str
+    bank: Optional[str] = None
+    closing_day: int
+    due_day: int
+    credit_limit: float = 0.0
+    current_balance: float = 0.0
+    is_active: bool = True
+
+class BankAccount(BaseModel):
+    id: Optional[str] = None
+    bank_name: str
+    account_type: str = 'corrente'
+    balance_approx: float = 0.0
+    is_active: bool = True
+
+class UserDebt(BaseModel):
+    id: Optional[str] = None
+    description: str
+    debt_type: str  # cartao_rotativo / emprestimo_pessoal / financiamento_veiculo / financiamento_imovel / consignado / outro
+    total_amount: float
+    monthly_payment: float
+    installments_remaining: Optional[int] = None
+    interest_rate_monthly: Optional[float] = None  # % ao mês
+    credit_score_approx: Optional[str] = None  # ruim/regular/bom/excelente
+    is_active: bool = True
+
+class UserAsset(BaseModel):
+    id: Optional[str] = None
+    asset_type: str  # imovel_proprio / imovel_financiando / veiculo_quitado / veiculo_financiando / investimento
+    description: Optional[str] = None
+    estimated_value: Optional[float] = None
+    financed_value: Optional[float] = None
+    monthly_payment: Optional[float] = None
+    installments_remaining: Optional[int] = None
+    is_active: bool = True
+
+class VariableExpenseAverages(BaseModel):
+    alimentacao_fora: float = 0.0
+    transporte: float = 0.0
+    lazer: float = 0.0
+    vestuario: float = 0.0
+    outros: float = 0.0
+
+class PJProfile(BaseModel):
+    cnpj: Optional[str] = None
+    regime_tributario: Optional[str] = None  # mei / simples / lucro_presumido / lucro_real
+    business_type: Optional[str] = None
+    monthly_revenue_avg: Optional[float] = None
+    prolabore: Optional[float] = None
+    payroll_total: Optional[float] = None
+    tax_monthly: Optional[float] = None
+    operational_costs: Optional[float] = None
+    partner_count: int = 1
+
+
 # Carregamento de Seed Data Seguro (Proteção contra exposição no Git)
 # -----------------------------------------------------------------------------
 
@@ -303,6 +362,148 @@ def compute_deterministic_local_allocation(financial_summary: Dict[str, Any]) ->
 # -----------------------------------------------------------------------------
 
 class DemoDataManager:
+
+    def get_credit_cards(self, user_id) -> list:
+        return self._users_data.get(str(user_id), {}).get('credit_cards', [])
+
+    def save_credit_cards(self, user_id, cards: list) -> None:
+        uid = str(user_id)
+        if uid not in self._users_data:
+            self._users_data[uid] = {}
+        self._users_data[uid]['credit_cards'] = cards
+
+    def upsert_credit_card(self, user_id, card: dict) -> dict:
+        cards = self.get_credit_cards(user_id)
+        card_id = card.get('id') or str(uuid.uuid4())
+        card['id'] = card_id
+        existing = next((c for c in cards if c.get('id') == card_id), None)
+        if existing:
+            existing.update(card)
+        else:
+            cards.append(card)
+        self.save_credit_cards(user_id, cards)
+        return card
+
+    def delete_credit_card(self, user_id, card_id: str) -> bool:
+        cards = self.get_credit_cards(user_id)
+        new_cards = [c for c in cards if c.get('id') != card_id]
+        self.save_credit_cards(user_id, new_cards)
+        return len(new_cards) < len(cards)
+
+    def get_bank_accounts(self, user_id) -> list:
+        return self._users_data.get(str(user_id), {}).get('bank_accounts', [])
+
+    def save_bank_accounts(self, user_id, accounts: list) -> None:
+        uid = str(user_id)
+        if uid not in self._users_data: self._users_data[uid] = {}
+        self._users_data[uid]['bank_accounts'] = accounts
+
+    def upsert_bank_account(self, user_id, account: dict) -> dict:
+        accounts = self.get_bank_accounts(user_id)
+        acct_id = account.get('id') or str(uuid.uuid4())
+        account['id'] = acct_id
+        existing = next((a for a in accounts if a.get('id') == acct_id), None)
+        if existing:
+            existing.update(account)
+        else:
+            accounts.append(account)
+        self.save_bank_accounts(user_id, accounts)
+        return account
+
+    def delete_bank_account(self, user_id, acct_id: str) -> bool:
+        accounts = self.get_bank_accounts(user_id)
+        new_accts = [a for a in accounts if a.get('id') != acct_id]
+        self.save_bank_accounts(user_id, new_accts)
+        return len(new_accts) < len(accounts)
+
+    def get_user_debts(self, user_id) -> list:
+        return self._users_data.get(str(user_id), {}).get('debts', [])
+
+    def save_user_debts(self, user_id, debts: list) -> None:
+        uid = str(user_id)
+        if uid not in self._users_data: self._users_data[uid] = {}
+        self._users_data[uid]['debts'] = debts
+
+    def upsert_user_debt(self, user_id, debt: dict) -> dict:
+        debts = self.get_user_debts(user_id)
+        debt_id = debt.get('id') or str(uuid.uuid4())
+        debt['id'] = debt_id
+        existing = next((d for d in debts if d.get('id') == debt_id), None)
+        if existing:
+            existing.update(debt)
+        else:
+            debts.append(debt)
+        self.save_user_debts(user_id, debts)
+        return debt
+
+    def delete_user_debt(self, user_id, debt_id: str) -> bool:
+        debts = self.get_user_debts(user_id)
+        new_debts = [d for d in debts if d.get('id') != debt_id]
+        self.save_user_debts(user_id, new_debts)
+        return len(new_debts) < len(debts)
+
+    def get_user_assets(self, user_id) -> list:
+        return self._users_data.get(str(user_id), {}).get('assets', [])
+
+    def save_user_assets(self, user_id, assets: list) -> None:
+        uid = str(user_id)
+        if uid not in self._users_data: self._users_data[uid] = {}
+        self._users_data[uid]['assets'] = assets
+
+    def upsert_user_asset(self, user_id, asset: dict) -> dict:
+        assets = self.get_user_assets(user_id)
+        asset_id = asset.get('id') or str(uuid.uuid4())
+        asset['id'] = asset_id
+        existing = next((a for a in assets if a.get('id') == asset_id), None)
+        if existing:
+            existing.update(asset)
+        else:
+            assets.append(asset)
+        self.save_user_assets(user_id, assets)
+        return asset
+
+    def delete_user_asset(self, user_id, asset_id: str) -> bool:
+        assets = self.get_user_assets(user_id)
+        new_assets = [a for a in assets if a.get('id') != asset_id]
+        self.save_user_assets(user_id, new_assets)
+        return len(new_assets) < len(assets)
+
+    def get_variable_expense_averages(self, user_id) -> dict:
+        return self._users_data.get(str(user_id), {}).get('variable_averages', {
+            'alimentacao_fora': 0, 'transporte': 0, 'lazer': 0, 'vestuario': 0, 'outros': 0
+        })
+
+    def save_variable_expense_averages(self, user_id, averages: dict) -> None:
+        uid = str(user_id)
+        if uid not in self._users_data: self._users_data[uid] = {}
+        self._users_data[uid]['variable_averages'] = averages
+
+
+    def get_complete_financial_profile(self, user_id) -> dict:
+        profile = self.get_onboarding_profile(user_id)
+        cards = self.get_credit_cards(user_id)
+        accounts = self.get_bank_accounts(user_id)
+        debts = self.get_user_debts(user_id)
+        assets = self.get_user_assets(user_id)
+        var_averages = self.get_variable_expense_averages(user_id)
+        
+        return {
+            'profile': profile or {},
+            'credit_cards': cards,
+            'bank_accounts': accounts,
+            'debts': debts,
+            'assets': assets,
+            'variable_averages': var_averages,
+        }
+
+    def get_pj_profile(self, user_id) -> Optional[dict]:
+        return self._users_data.get(str(user_id), {}).get('pj_profile')
+
+    def save_pj_profile(self, user_id, profile: dict) -> None:
+        uid = str(user_id)
+        if uid not in self._users_data: self._users_data[uid] = {}
+        self._users_data[uid]['pj_profile'] = profile
+
     """Armazena e manipula os dados em memória quando o PostgreSQL não estiver disponível."""
     
     def __init__(self):
@@ -316,6 +517,7 @@ class DemoDataManager:
         self.user_profiles: Dict[int, Dict[str, Any]] = {}
         self.cached_consensus_by_user: Dict[Optional[int], ConsensusRecord] = {}
         self._init_default_cache()
+        self._users_data: Dict[str, Any] = {}
 
     def _init_default_cache(self):
         summary = self.get_financial_summary("Outubro")
@@ -417,6 +619,40 @@ class DemoDataManager:
     def save_onboarding_profile(self, user_id: int, payload: Dict[str, Any], is_draft: bool = False):
         normalized = self._normalize_onboarding_payload(user_id, payload)
         self.user_profiles[user_id] = normalized
+        
+        # Salvar cartões
+        cards = payload.get('cards', [])
+        if cards:
+            for card in cards:
+                self.upsert_credit_card(user_id, card)
+
+        # Salvar contas bancárias
+        bank_accounts = payload.get('bank_accounts', [])
+        if bank_accounts:
+            for account in bank_accounts:
+                self.upsert_bank_account(user_id, account)
+
+        # Salvar dívidas
+        debts = payload.get('debts', [])
+        if debts:
+            for debt in debts:
+                self.upsert_user_debt(user_id, debt)
+
+        # Salvar patrimônio
+        assets = payload.get('assets', [])
+        if assets:
+            for asset in assets:
+                self.upsert_user_asset(user_id, asset)
+
+        # Salvar médias de despesas variáveis
+        variable_averages = payload.get('variable_expense_averages', {})
+        if variable_averages:
+            self.save_variable_expense_averages(user_id, variable_averages)
+
+        # Salvar perfil PJ
+        pj_data = payload.get('pj_data')
+        if pj_data:
+            self.save_pj_profile(user_id, pj_data)
         if not is_draft:
             self.set_onboarding_completed(user_id, True)
             self.invalidate_cache(user_id=user_id)
@@ -566,6 +802,232 @@ class DemoDataManager:
 # -----------------------------------------------------------------------------
 
 class DatabaseManager:
+
+    # ── Credit Cards ──────────────────────────────────────────────────────────
+    async def get_credit_cards(self, user_id) -> list:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM credit_cards WHERE user_id=$1 AND is_active=TRUE ORDER BY created_at",
+                int(user_id)
+            )
+            return [dict(r) for r in rows]
+
+    async def upsert_credit_card(self, user_id, card: dict) -> dict:
+        async with self.pool.acquire() as conn:
+            if card.get('id'):
+                row = await conn.fetchrow(
+                    """UPDATE credit_cards SET name=$1, bank=$2, closing_day=$3, due_day=$4,
+                       credit_limit=$5, current_balance=$6 WHERE id=$7 AND user_id=$8 RETURNING *""",
+                    card['name'], card.get('bank'), card['closing_day'], card['due_day'],
+                    card.get('credit_limit', 0), card.get('current_balance', 0),
+                    card['id'], int(user_id)
+                )
+            else:
+                row = await conn.fetchrow(
+                    """INSERT INTO credit_cards (user_id, name, bank, closing_day, due_day, credit_limit, current_balance)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *""",
+                    int(user_id), card['name'], card.get('bank'), card['closing_day'], card['due_day'],
+                    card.get('credit_limit', 0), card.get('current_balance', 0)
+                )
+            return dict(row) if row else card
+
+    async def patch_credit_card_balance(self, user_id, card_id: str, current_balance: float) -> bool:
+        async with self.pool.acquire() as conn:
+            r = await conn.execute(
+                "UPDATE credit_cards SET current_balance=$1 WHERE id=$2 AND user_id=$3",
+                current_balance, card_id, int(user_id)
+            )
+            return r == 'UPDATE 1'
+
+    async def delete_credit_card(self, user_id, card_id: str) -> bool:
+        async with self.pool.acquire() as conn:
+            r = await conn.execute(
+                "UPDATE credit_cards SET is_active=FALSE WHERE id=$1 AND user_id=$2",
+                card_id, int(user_id)
+            )
+            return r == 'UPDATE 1'
+
+    # ── Bank Accounts ─────────────────────────────────────────────────────────
+    async def get_bank_accounts(self, user_id) -> list:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM bank_accounts WHERE user_id=$1 AND is_active=TRUE ORDER BY created_at",
+                int(user_id)
+            )
+            return [dict(r) for r in rows]
+
+    async def upsert_bank_account(self, user_id, account: dict) -> dict:
+        async with self.pool.acquire() as conn:
+            if account.get('id'):
+                row = await conn.fetchrow(
+                    """UPDATE bank_accounts SET bank_name=$1, account_type=$2, balance_approx=$3
+                       WHERE id=$4 AND user_id=$5 RETURNING *""",
+                    account['bank_name'], account.get('account_type', 'corrente'),
+                    account.get('balance_approx', 0), account['id'], int(user_id)
+                )
+            else:
+                row = await conn.fetchrow(
+                    """INSERT INTO bank_accounts (user_id, bank_name, account_type, balance_approx)
+                       VALUES ($1,$2,$3,$4) RETURNING *""",
+                    int(user_id), account['bank_name'],
+                    account.get('account_type', 'corrente'), account.get('balance_approx', 0)
+                )
+            return dict(row) if row else account
+
+    async def delete_bank_account(self, user_id, acct_id: str) -> bool:
+        async with self.pool.acquire() as conn:
+            r = await conn.execute(
+                "UPDATE bank_accounts SET is_active=FALSE WHERE id=$1 AND user_id=$2",
+                acct_id, int(user_id)
+            )
+            return r == 'UPDATE 1'
+
+    # ── User Debts ────────────────────────────────────────────────────────────
+    async def get_user_debts(self, user_id) -> list:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM user_debts WHERE user_id=$1 AND is_active=TRUE ORDER BY created_at",
+                int(user_id)
+            )
+            return [dict(r) for r in rows]
+
+    async def upsert_user_debt(self, user_id, debt: dict) -> dict:
+        async with self.pool.acquire() as conn:
+            if debt.get('id'):
+                row = await conn.fetchrow(
+                    """UPDATE user_debts SET description=$1, debt_type=$2, total_amount=$3,
+                       monthly_payment=$4, installments_remaining=$5, interest_rate_monthly=$6,
+                       credit_score_approx=$7 WHERE id=$8 AND user_id=$9 RETURNING *""",
+                    debt['description'], debt['debt_type'], debt['total_amount'],
+                    debt['monthly_payment'], debt.get('installments_remaining'),
+                    debt.get('interest_rate_monthly'), debt.get('credit_score_approx'),
+                    debt['id'], int(user_id)
+                )
+            else:
+                row = await conn.fetchrow(
+                    """INSERT INTO user_debts (user_id, description, debt_type, total_amount,
+                       monthly_payment, installments_remaining, interest_rate_monthly, credit_score_approx)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *""",
+                    int(user_id), debt['description'], debt['debt_type'], debt['total_amount'],
+                    debt['monthly_payment'], debt.get('installments_remaining'),
+                    debt.get('interest_rate_monthly'), debt.get('credit_score_approx')
+                )
+            return dict(row) if row else debt
+
+    async def delete_user_debt(self, user_id, debt_id: str) -> bool:
+        async with self.pool.acquire() as conn:
+            r = await conn.execute(
+                "UPDATE user_debts SET is_active=FALSE WHERE id=$1 AND user_id=$2",
+                debt_id, int(user_id)
+            )
+            return r == 'UPDATE 1'
+
+    # ── User Assets ───────────────────────────────────────────────────────────
+    async def get_user_assets(self, user_id) -> list:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM user_assets WHERE user_id=$1 AND is_active=TRUE ORDER BY created_at",
+                int(user_id)
+            )
+            return [dict(r) for r in rows]
+
+    async def upsert_user_asset(self, user_id, asset: dict) -> dict:
+        async with self.pool.acquire() as conn:
+            if asset.get('id'):
+                row = await conn.fetchrow(
+                    """UPDATE user_assets SET asset_type=$1, description=$2, estimated_value=$3,
+                       financed_value=$4, monthly_payment=$5, installments_remaining=$6
+                       WHERE id=$7 AND user_id=$8 RETURNING *""",
+                    asset['asset_type'], asset.get('description'), asset.get('estimated_value'),
+                    asset.get('financed_value'), asset.get('monthly_payment'),
+                    asset.get('installments_remaining'), asset['id'], int(user_id)
+                )
+            else:
+                row = await conn.fetchrow(
+                    """INSERT INTO user_assets (user_id, asset_type, description, estimated_value,
+                       financed_value, monthly_payment, installments_remaining)
+                       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *""",
+                    int(user_id), asset['asset_type'], asset.get('description'),
+                    asset.get('estimated_value'), asset.get('financed_value'),
+                    asset.get('monthly_payment'), asset.get('installments_remaining')
+                )
+            return dict(row) if row else asset
+
+    async def delete_user_asset(self, user_id, asset_id: str) -> bool:
+        async with self.pool.acquire() as conn:
+            r = await conn.execute(
+                "UPDATE user_assets SET is_active=FALSE WHERE id=$1 AND user_id=$2",
+                asset_id, int(user_id)
+            )
+            return r == 'UPDATE 1'
+
+    # ── Variable Expense Averages ─────────────────────────────────────────────
+    async def get_variable_expense_averages(self, user_id) -> dict:
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT category, monthly_avg FROM variable_expense_averages WHERE user_id=$1",
+                int(user_id)
+            )
+            result = {'alimentacao_fora': 0, 'transporte': 0, 'lazer': 0, 'vestuario': 0, 'outros': 0}
+            for row in rows:
+                result[row['category']] = float(row['monthly_avg'])
+            return result
+
+    async def save_variable_expense_averages(self, user_id, averages: dict) -> None:
+        async with self.pool.acquire() as conn:
+            for category, monthly_avg in averages.items():
+                await conn.execute(
+                    """INSERT INTO variable_expense_averages (user_id, category, monthly_avg, updated_at)
+                       VALUES ($1, $2, $3, now())
+                       ON CONFLICT (user_id, category)
+                       DO UPDATE SET monthly_avg=$3, updated_at=now()""",
+                    int(user_id), category, float(monthly_avg)
+                )
+
+    # ── PJ Profile ────────────────────────────────────────────────────────────
+    async def get_pj_profile(self, user_id) -> Optional[dict]:
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM pj_profiles WHERE user_id=$1", int(user_id)
+            )
+            return dict(row) if row else None
+
+    async def save_pj_profile(self, user_id, profile: dict) -> None:
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                """INSERT INTO pj_profiles (user_id, cnpj, regime_tributario, business_type,
+                   monthly_revenue_avg, prolabore, payroll_total, tax_monthly, operational_costs, partner_count, updated_at)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now())
+                   ON CONFLICT (user_id) DO UPDATE SET
+                   cnpj=$2, regime_tributario=$3, business_type=$4,
+                   monthly_revenue_avg=$5, prolabore=$6, payroll_total=$7,
+                   tax_monthly=$8, operational_costs=$9, partner_count=$10, updated_at=now()""",
+                int(user_id), profile.get('cnpj'), profile.get('regime_tributario'),
+                profile.get('business_type'), profile.get('monthly_revenue_avg'),
+                profile.get('prolabore'), profile.get('payroll_total'),
+                profile.get('tax_monthly'), profile.get('operational_costs'),
+                profile.get('partner_count', 1)
+            )
+
+    async def get_complete_financial_profile(self, user_id) -> dict:
+        """Retorna perfil financeiro completo para o prompt da IA."""
+        # Coleta tudo em paralelo
+        profile = await self.get_user_profile(user_id) if hasattr(self, 'get_user_profile') else {}
+        cards = await self.get_credit_cards(user_id)
+        accounts = await self.get_bank_accounts(user_id)
+        debts = await self.get_user_debts(user_id)
+        assets = await self.get_user_assets(user_id)
+        var_averages = await self.get_variable_expense_averages(user_id)
+        
+        return {
+            'profile': profile or {},
+            'credit_cards': cards,
+            'bank_accounts': accounts,
+            'debts': debts,
+            'assets': assets,
+            'variable_averages': var_averages,
+        }
+
     """Gerenciador principal que usa PostgreSQL ou faz fallback transparente para DemoDataManager."""
 
     def __init__(self):
@@ -787,7 +1249,101 @@ class DatabaseManager:
                 responded_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
             """
-        ]
+        
+            """
+            CREATE TABLE IF NOT EXISTS credit_cards (
+                id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name            TEXT NOT NULL,
+                bank            TEXT,
+                closing_day     INT NOT NULL CHECK (closing_day BETWEEN 1 AND 31),
+                due_day         INT NOT NULL CHECK (due_day BETWEEN 1 AND 31),
+                credit_limit    NUMERIC(12,2) DEFAULT 0,
+                current_balance NUMERIC(12,2) DEFAULT 0,
+                is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            CREATE INDEX IF NOT EXISTS ix_credit_cards_user ON credit_cards(user_id);
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS bank_accounts (
+                id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                bank_name       TEXT NOT NULL,
+                account_type    TEXT NOT NULL DEFAULT 'corrente',
+                balance_approx  NUMERIC(12,2) DEFAULT 0,
+                is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            CREATE INDEX IF NOT EXISTS ix_bank_accounts_user ON bank_accounts(user_id);
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS user_debts (
+                id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id                 INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                description             TEXT NOT NULL,
+                debt_type               TEXT NOT NULL,
+                total_amount            NUMERIC(12,2) NOT NULL,
+                monthly_payment         NUMERIC(12,2) NOT NULL,
+                installments_remaining  INT,
+                interest_rate_monthly   NUMERIC(6,4),
+                credit_score_approx     TEXT,
+                is_active               BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            CREATE INDEX IF NOT EXISTS ix_user_debts_user ON user_debts(user_id);
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS user_assets (
+                id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id                INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                asset_type             TEXT NOT NULL,
+                description            TEXT,
+                estimated_value        NUMERIC(12,2),
+                financed_value         NUMERIC(12,2),
+                monthly_payment        NUMERIC(12,2),
+                installments_remaining INT,
+                is_active              BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at             TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            CREATE INDEX IF NOT EXISTS ix_user_assets_user ON user_assets(user_id);
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS variable_expense_averages (
+                id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                category    TEXT NOT NULL,
+                monthly_avg NUMERIC(12,2) NOT NULL DEFAULT 0,
+                updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                UNIQUE(user_id, category)
+            );
+            CREATE INDEX IF NOT EXISTS ix_var_exp_avg_user ON variable_expense_averages(user_id);
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS pj_profiles (
+                id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+                cnpj                 TEXT,
+                regime_tributario    TEXT,
+                business_type        TEXT,
+                monthly_revenue_avg  NUMERIC(12,2),
+                prolabore            NUMERIC(12,2),
+                payroll_total        NUMERIC(12,2),
+                tax_monthly          NUMERIC(12,2),
+                operational_costs    NUMERIC(12,2),
+                partner_count        INT DEFAULT 1,
+                created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+                updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """,
+            """
+            ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS user_type        TEXT NOT NULL DEFAULT 'pf',
+                ADD COLUMN IF NOT EXISTS marital_status   TEXT,
+                ADD COLUMN IF NOT EXISTS dependents       INT DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS work_regime      TEXT;
+            """
+]
         
         async with self.pool.acquire() as conn:
             for q in queries:
@@ -925,9 +1481,49 @@ class DatabaseManager:
                         bool(onb.get('data_consent', False))
                     )
                     
-                    if not is_draft:
-                        await conn.execute("UPDATE users SET onboarding_completed = TRUE WHERE id = $1;", user_id)
-                        await conn.execute("UPDATE llm_consensus_cache SET is_active = FALSE WHERE user_id = $1;", user_id)
+                    
+        # Salvar cartões
+        cards = payload.get('cards', [])
+        if cards:
+            for card in cards:
+                await self.upsert_credit_card(user_id, card)
+
+        # Salvar contas bancárias
+        bank_accounts = payload.get('bank_accounts', [])
+        if bank_accounts:
+            for account in bank_accounts:
+                await self.upsert_bank_account(user_id, account)
+
+        # Salvar dívidas
+        debts = payload.get('debts', [])
+        if debts:
+            for debt in debts:
+                await self.upsert_user_debt(user_id, debt)
+
+        # Salvar patrimônio
+        assets = payload.get('assets', [])
+        if assets:
+            for asset in assets:
+                await self.upsert_user_asset(user_id, asset)
+
+        # Salvar médias de despesas variáveis
+        variable_averages = payload.get('variable_expense_averages', {})
+        if variable_averages:
+            await self.save_variable_expense_averages(user_id, variable_averages)
+
+        # Salvar perfil PJ
+        pj_data = payload.get('pj_data')
+        if pj_data:
+            await self.save_pj_profile(user_id, pj_data)
+
+        # Marcar onboarding como concluído
+        if not is_draft:
+            if self.is_connected and self.pool:
+                async with self.pool.acquire() as conn2:
+                    await conn2.execute("UPDATE users SET onboarding_completed = TRUE WHERE id = $1;", user_id)
+                    await conn2.execute("UPDATE llm_consensus_cache SET is_active = FALSE WHERE user_id = $1;", user_id)
+            else:
+                self.demo_manager.set_onboarding_completed(user_id)
 
     async def get_onboarding_profile(self, user_id: int) -> Optional[Dict[str, Any]]:
         if not self.is_connected or not self.pool:

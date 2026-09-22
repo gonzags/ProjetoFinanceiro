@@ -218,19 +218,19 @@ function updateHorizonGauge(timeline, kpis) {
 
     milestonesGrid.innerHTML = `
       <div class="lh-milestone-item">
-        <div class="lh-milestone-month">${m0.month} 2026</div>
+        <div class="lh-milestone-month">${m0.month} ${m0.year || new Date().getFullYear()}</div>
         <div class="lh-milestone-details">${m0.status_label || 'Zona Crítica'} (Sobra ${formatCurrency(m0.net_surplus)})</div>
       </div>
       <div class="lh-milestone-item">
-        <div class="lh-milestone-month">${m1.month} 2026</div>
+        <div class="lh-milestone-month">${m1.month} ${m1.year || new Date().getFullYear()}</div>
         <div class="lh-milestone-details">Alívio (+${formatCurrency(m1.net_surplus)}) • Reserva</div>
       </div>
       <div class="lh-milestone-item">
-        <div class="lh-milestone-month">${m2.month} 2026</div>
+        <div class="lh-milestone-month">${m2.month} ${m2.year || new Date().getFullYear()}</div>
         <div class="lh-milestone-details">Folga Sólida (+${formatCurrency(m2.net_surplus)})</div>
       </div>
       <div class="lh-milestone-item">
-        <div class="lh-milestone-month">${m6.month} 2027+</div>
+        <div class="lh-milestone-month">${m6.month} ${(m6.year || new Date().getFullYear())+'+'}</div>
         <div class="lh-milestone-details text-green"><strong>Liberdade: +${formatCurrency(m6.net_surplus)} livre</strong></div>
       </div>
     `;
@@ -277,7 +277,16 @@ async function loadKPIs() {
     if (fixedSub) fixedSub.textContent = `${m.fixed_ratio_pct}% da renda líquida`;
 
     const debtsSub = document.getElementById('kpiDebtsSub');
-    if (debtsSub) debtsSub.textContent = `PicPay ${formatCurrency(s.picpay_amount)} • Nu ${formatCurrency(s.nubank_amount)}`;
+    if (debtsSub) {
+      // Usar cartões carregados via loadCardBadges() se disponíveis
+      if (window._userCards && window._userCards.length > 0) {
+        debtsSub.textContent = window._userCards
+          .map(c => `${c.name} fecha dia ${c.closing_day}`)
+          .join(' • ');
+      } else {
+        debtsSub.textContent = 'Compromissos mensais';
+      }
+    }
 
     const surplusDiag = document.getElementById('kpiSurplusDiag');
     if (surplusDiag) surplusDiag.textContent = s.net_surplus > 500 ? 'Folga sólida consolidada' : 'Zona crítica controlada • Saldo positivo';
@@ -299,59 +308,71 @@ async function loadConsensus() {
   }
 }
 
-function renderConsensus(data) {
-  const badge = document.getElementById('consensusBadge');
-  const badgeText = document.getElementById('consensusBadgeText');
-  const headerBadge = document.getElementById('headerStatusBadge');
-  const headerStatusText = document.getElementById('headerStatusText');
-
-  // Atualiza badge de consenso
-  if (data.consensus_status === 'total') {
-    badge.className = 'lh-badge lh-badge-status-connected';
-    badgeText.textContent = 'Consenso Total Atingido';
-  } else if (data.consensus_status === 'parcial') {
-    badge.className = 'lh-badge lh-badge-status-partial';
-    badgeText.textContent = 'Consenso Parcial (3 Rodadas)';
-    if (headerBadge && headerStatusText) {
-      headerBadge.className = 'lh-badge lh-badge-status-partial';
-      headerStatusText.textContent = 'Consenso parcial (3 rodadas sem convergência total)';
+async function loadCardBadges() {
+  try {
+    const res = await fetch('/api/profile/cards');
+    if (!res.ok) return;
+    const cards = await res.json();
+    window._userCards = cards; // cache global para uso em loadKPIs
+    
+    const bar = document.getElementById('cardBadgesBar');
+    if (!bar) return;
+    
+    if (!cards || cards.length === 0) {
+      bar.innerHTML = '<span style="font-size:0.78rem; color:var(--lh-text-muted);">Nenhum cartão cadastrado ainda.</span>';
+      return;
     }
-  } else {
-    badge.className = 'lh-badge lh-badge-status-demo';
-    badgeText.textContent = 'Fallback Determinístico Local';
+    
+    bar.innerHTML = cards.map(c => `
+      <span style="
+        display:inline-flex; align-items:center; gap:5px;
+        padding:5px 10px; background:var(--lh-surface-2, rgba(100,116,139,0.08));
+        border:1px solid var(--lh-border); border-radius:20px;
+        font-size:0.78rem; color:var(--lh-text);
+      ">
+        💳 <strong>${c.name}</strong>: fecha dia ${c.closing_day}, vence dia ${c.due_day}
+        ${c.current_balance > 0 ? `<span style="color:#ef4444;margin-left:4px;">R$ ${c.current_balance.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>` : ''}
+      </span>
+    `).join('');
+  } catch (e) {
+    console.error('Erro ao carregar cartões:', e);
   }
+}
 
+function renderConsensus(data) {
   // Alocações
-  const alloc = data.allocation;
-  document.getElementById('aiAllocNec').textContent = `${alloc.necessidades.toFixed(1)}%`;
-  document.getElementById('aiAllocDes').textContent = `${alloc.desejos.toFixed(1)}%`;
-  document.getElementById('aiAllocFut').textContent = `${alloc.futuro.toFixed(1)}%`;
+  const aiAllocNec = document.getElementById('aiAllocNec');
+  const aiAllocDes = document.getElementById('aiAllocDes');
+  const aiAllocFut = document.getElementById('aiAllocFut');
+  const aiReasoningQuote = document.getElementById('aiReasoningQuote');
+  const aiRiskTagsContainer = document.getElementById('aiRiskTagsContainer');
+  const recalcBtn = document.getElementById('recalculateBtn');
+  const timestampFooter = document.getElementById('analysisTimestampFooter');
 
-  // Confiança e Parecer
-  const confPct = Math.round(data.confidence_score * 100);
-  document.getElementById('aiConfidenceScore').textContent = `Confiança: ${confPct}%`;
-  document.getElementById('aiReasoningQuote').textContent = `"${data.reasoning_summary}"`;
-
-  // Flags de Risco
-  const tagsContainer = document.getElementById('aiRiskTagsContainer');
-  tagsContainer.innerHTML = '';
-  if (data.risk_flags && data.risk_flags.length > 0) {
-    data.risk_flags.forEach(flag => {
-      const span = document.createElement('span');
-      span.className = 'lh-risk-tag';
-      span.textContent = `⚠ ${flag}`;
-      tagsContainer.appendChild(span);
-    });
-  } else {
-    tagsContainer.innerHTML = '<span class="lh-risk-tag">Nenhum sinal crítico detectado.</span>';
+  if (data.allocation) {
+    if (aiAllocNec) aiAllocNec.textContent = `${(data.allocation.necessidades || 0).toFixed(1)}%`;
+    if (aiAllocDes) aiAllocDes.textContent = `${(data.allocation.desejos || 0).toFixed(1)}%`;
+    if (aiAllocFut) aiAllocFut.textContent = `${(data.allocation.futuro || 0).toFixed(1)}%`;
   }
 
-  // Metadados
-  const provs = data.participating_providers || [];
-  document.getElementById('aiProvidersMeta').textContent = 
-    provs.length > 0 ? `Provedores participantes: ${provs.join(', ')}` : 'Modo determinístico local';
-  document.getElementById('aiRoundsMeta').textContent = 
-    `Rodadas executadas: ${data.rounds_executed || 1}`;
+  if (aiReasoningQuote && data.reasoning_summary) {
+    aiReasoningQuote.textContent = data.reasoning_summary;
+  }
+
+  if (aiRiskTagsContainer) {
+    const flags = data.risk_flags || [];
+    if (flags.length > 0) {
+      aiRiskTagsContainer.innerHTML = flags.map(f => `<span class="lh-risk-tag">⚠️ ${f}</span>`).join('');
+    } else {
+      aiRiskTagsContainer.innerHTML = '<span style="font-size:0.82rem; color:#22c55e;">✅ Nenhum alerta crítico identificado</span>';
+    }
+  }
+
+  // Timestamp
+  if (timestampFooter) {
+    const now = new Date();
+    timestampFooter.textContent = `Última análise: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}`;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -1120,6 +1141,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCategories();
   loadBudgetMonth();   // KPIs + despesas + receitas do mês
   loadTimeline();      // gráfico de fluxo de caixa
+  loadCardBadges();
   loadKPIs();          // KPIs legados (consenso)
   loadConsensus();     // hub de decisão IA
   loadGoal();          // objetivo principal
