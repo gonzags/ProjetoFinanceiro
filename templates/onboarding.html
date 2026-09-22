@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,6 +30,7 @@
       max-height: 92vh; overflow-y: auto;
       padding: 32px 28px;
       color: var(--lh-text, #e2e8f0);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     /* Cabeçalho Ledger */
@@ -46,9 +47,9 @@
       font-size: 0.8rem; color: #64748b; margin-top: 2px;
     }
 
-    /* Reutiliza os estilos do modal embutido */
-    .lh-modal-backdrop { display: block !important; position: static !important; background: none !important; backdrop-filter: none !important; }
-    .lh-modal { max-width: none !important; width: 100% !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; }
+    /* Reutiliza os estilos do modal embutido, eliminando bordas duplicadas */
+    .lh-modal-backdrop { display: block !important; position: static !important; background: none !important; backdrop-filter: none !important; padding: 0 !important; }
+    .lh-modal { max-width: none !important; width: 100% !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; border: none !important; outline: none !important; }
 
     /* Inputs e selects ficam legíveis no fundo escuro */
     input, select, textarea {
