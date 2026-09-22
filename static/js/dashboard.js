@@ -1186,33 +1186,92 @@ function renderPortfolio(p) {
     date.textContent = 'Gerado em ' + new Date(p.generated_at).toLocaleDateString('pt-BR');
   }
 
-  const allocs = [
-    { label: 'Renda Fixa', pct: p.pct_renda_fixa, color: '#1E56A0' },
-    { label: 'Tesouro',    pct: p.pct_tesouro,    color: '#2EA884' },
-    { label: 'FIIs',       pct: p.pct_fiis,        color: '#7C5CBF' },
-    { label: 'Ações',      pct: p.pct_acoes,       color: '#E59830' },
-    { label: 'Liq.',       pct: p.pct_reserva_liquida, color: '#5A6A80' },
-    { label: 'Cripto',     pct: p.pct_cripto,      color: '#EF4444' },
-  ].filter(a => a.pct > 0);
+  const aporte   = p.monthly_investment_target || 0;
+  const income   = p.monthly_income_base || 0;
+  const pctSav   = p.pct_savings_used || 0;
+  const srcLabel = p.income_source === 'perfil_onboarding'
+    ? '(renda do cadastro)'
+    : '(lançamentos do mês)';
 
-  panel.innerHTML = `
-    <div class="lh-portfolio-grid">
+  const allocs = [
+    { label: 'Renda Fixa', key: 'pct_renda_fixa',      pct: p.pct_renda_fixa,      color: '#1E56A0', icon: '🏦' },
+    { label: 'Tesouro',    key: 'pct_tesouro',          pct: p.pct_tesouro,          color: '#2EA884', icon: '🟢' },
+    { label: 'FIIs',       key: 'pct_fiis',             pct: p.pct_fiis,             color: '#7C5CBF', icon: '🏢' },
+    { label: 'Ações',      key: 'pct_acoes',            pct: p.pct_acoes,            color: '#E59830', icon: '📈' },
+    { label: 'Liquidez',   key: 'pct_reserva_liquida',  pct: p.pct_reserva_liquida,  color: '#5A6A80', icon: '💧' },
+    { label: 'Cripto',     key: 'pct_cripto',           pct: p.pct_cripto,           color: '#EF4444', icon: '₿' },
+  ].filter(a => a.pct > 0).map(a => ({
+    ...a,
+    valor: aporte > 0 ? aporte * (a.pct / 100) : 0
+  }));
+
+  // ── Cadeia de origem → destino ─────────────────────────────────────────────
+  const chainHtml = income > 0 ? `
+    <div style="margin-bottom:14px; padding:10px 12px; background:rgba(30,86,160,0.08); border:1px solid rgba(30,86,160,0.2); border-radius:8px; font-size:0.79rem;">
+      <div style="font-weight:700; color:var(--lh-text); margin-bottom:6px; font-size:0.78rem; text-transform:uppercase; letter-spacing:.4px;">Origem → Destino</div>
+      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px; line-height:1.6;">
+        <span style="background:var(--lh-panel-alt,rgba(100,116,139,.1)); padding:2px 8px; border-radius:4px; font-weight:600; color:var(--lh-text);">${formatCurrency(income)}</span>
+        <span style="color:var(--lh-text-muted);">renda mensal ${srcLabel}</span>
+        <span style="color:var(--lh-text-muted); padding:0 2px;">×</span>
+        <span style="background:rgba(46,168,132,.12); padding:2px 8px; border-radius:4px; font-weight:700; color:#2EA884;">${pctSav}% poupança</span>
+        <span style="color:var(--lh-text-muted); padding:0 2px;">=</span>
+        <span style="background:rgba(30,86,160,.12); padding:2px 8px; border-radius:4px; font-weight:800; color:#1E56A0;">${formatCurrency(aporte)}/mês</span>
+        <span style="color:var(--lh-text-muted);">para investir</span>
+      </div>
+    </div>` : `
+    <div style="margin-bottom:14px; padding:10px 12px; background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.2); border-radius:8px; font-size:0.79rem; color:var(--lh-text-muted);">
+      ⚠️ Renda não encontrada — <a href="/onboarding" style="color:#1E56A0; font-weight:600;">cadastre sua renda</a> para ver valores em R$.
+    </div>`;
+
+  // ── Grid de alocações com % e R$ ──────────────────────────────────────────
+  const gridHtml = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px; margin-bottom:12px;">
       ${allocs.map(a => `
-        <div class="lh-portfolio-item">
-          <div class="lh-portfolio-pct" style="color:${a.color};">${a.pct}%</div>
-          <div class="lh-portfolio-label">${a.label}</div>
+        <div style="background:var(--lh-panel-alt,rgba(100,116,139,.06)); border:1px solid var(--lh-border); border-radius:8px; padding:10px 12px;">
+          <div style="display:flex; align-items:center; gap:5px; margin-bottom:4px;">
+            <span style="font-size:0.9rem;">${a.icon}</span>
+            <span style="font-size:0.78rem; color:var(--lh-text-muted); font-weight:500;">${a.label}</span>
+          </div>
+          <div style="font-size:1.3rem; font-weight:800; color:${a.color}; line-height:1;">${a.pct}%</div>
+          ${aporte > 0
+            ? `<div style="font-size:0.82rem; font-weight:700; color:var(--lh-text); margin-top:3px;">${formatCurrency(a.valor)}<span style="font-size:0.7rem; font-weight:400; color:var(--lh-text-muted);">/mês</span></div>
+               <div style="font-size:0.68rem; color:var(--lh-text-muted); margin-top:2px;">${formatCurrency(aporte)} × ${a.pct}%</div>`
+            : `<div style="font-size:0.72rem; color:var(--lh-text-muted); margin-top:3px;">— sem renda</div>`
+          }
         </div>`).join('')}
+    </div>`;
+
+  // ── Resumo de destinos ─────────────────────────────────────────────────────
+  const reserva = p.emergency_reserve_target || 0;
+  const resumoHtml = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+      <div style="padding:10px 12px; background:var(--lh-panel-alt,rgba(100,116,139,.06)); border:1px solid var(--lh-border); border-radius:8px;">
+        <div style="font-size:0.7rem; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px;">Aporte mensal</div>
+        <div style="font-size:1rem; font-weight:800; color:#1E56A0;">${formatCurrency(aporte)}</div>
+        ${income > 0 ? `<div style="font-size:0.7rem; color:var(--lh-text-muted); margin-top:2px;">${pctSav}% de ${formatCurrency(income)}</div>` : ''}
+      </div>
+      <div style="padding:10px 12px; background:var(--lh-panel-alt,rgba(100,116,139,.06)); border:1px solid var(--lh-border); border-radius:8px;">
+        <div style="font-size:0.7rem; color:var(--lh-text-muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px;">Reserva de emergência</div>
+        <div style="font-size:1rem; font-weight:800; color:#E59830;">${formatCurrency(reserva)}</div>
+        ${income > 0 ? `<div style="font-size:0.7rem; color:var(--lh-text-muted); margin-top:2px;">6 × ${formatCurrency(income)}</div>` : ''}
+      </div>
     </div>
-    <div style="margin-top:12px; padding:10px 12px; background:var(--lh-surface-2, rgba(100,116,139,0.06)); border-radius:6px; font-size:0.8rem; color:var(--lh-text-muted);">
-      <strong>Aporte mensal sugerido:</strong>
-      <span style="font-weight:700; color:var(--lh-primary);">${formatCurrency(p.monthly_investment_target || 0)}</span>
-      ${p.months_to_goal ? ` · ${p.months_to_goal} meses para o objetivo` : ''}
-    </div>
-    ${p.rationale ? `<details style="margin-top:10px; font-size:0.78rem; color:var(--lh-text-muted);">
-      <summary style="cursor:pointer; font-weight:600; color:var(--lh-text);">Justificativa da IA</summary>
-      <p style="margin-top:6px; line-height:1.5;">${p.rationale}</p>
-    </details>` : ''}`;
+    ${p.months_to_goal ? `
+    <div style="padding:8px 12px; background:rgba(46,168,132,.08); border:1px solid rgba(46,168,132,.2); border-radius:8px; margin-bottom:12px; font-size:0.8rem;">
+      <strong>🎯 Meta:</strong> com ${formatCurrency(aporte)}/mês, você atinge o objetivo em <strong>${p.months_to_goal} meses</strong>
+      (~${Math.ceil(p.months_to_goal / 12)} ${Math.ceil(p.months_to_goal / 12) === 1 ? 'ano' : 'anos'})
+    </div>` : ''}`;
+
+  // ── Justificativa ──────────────────────────────────────────────────────────
+  const rationaleHtml = p.rationale ? `
+    <details style="margin-top:4px; font-size:0.78rem; color:var(--lh-text-muted);">
+      <summary style="cursor:pointer; font-weight:600; color:var(--lh-text); user-select:none;">▾ Justificativa da IA</summary>
+      <p style="margin-top:6px; line-height:1.5; padding:8px; background:var(--lh-panel-alt,rgba(100,116,139,.06)); border-radius:6px;">${p.rationale}</p>
+    </details>` : '';
+
+  panel.innerHTML = chainHtml + gridHtml + resumoHtml + rationaleHtml;
 }
+
 
 async function generatePortfolio() {
   const btn = document.getElementById('btnGeneratePortfolio');

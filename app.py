@@ -1291,9 +1291,19 @@ async def generate_portfolio(request: Request):
 
     # Construir portfólio a partir da alocação do consenso e do perfil do usuário
     alloc = result_dict.get("allocation", {})
-    # O percentual destinado a futuro/poupança é a base do portfólio de investimentos
     pct_savings = float(alloc.get("savings", alloc.get("futuro", 0)))
+
+    # Renda: preferir income_entries do mês; fallback para renda do onboarding
     monthly_income = float(summary.get("total_income", 0))
+    income_source = "lancamentos_do_mes"
+    if monthly_income <= 0:
+        profile_payload_raw = (profile or {}).get("payload", profile or {})
+        onb_income = float(profile_payload_raw.get("monthly_income") or
+                          (profile or {}).get("monthly_income") or 0)
+        if onb_income > 0:
+            monthly_income = onb_income
+            income_source = "perfil_onboarding"
+
     monthly_investment_target = round(monthly_income * (pct_savings / 100), 2) if monthly_income > 0 else 0.0
 
     # Determinar perfil de risco do usuário para distribuição dos ativos
@@ -1322,6 +1332,10 @@ async def generate_portfolio(request: Request):
         "emergency_reserve_target": round(monthly_income * 6, 2),
         "months_to_goal": months_to_goal,
         "rationale": f"Perfil {risk_tolerance or 'moderado'} — {result_dict.get('reasoning_summary', '')}".strip(),
+        # Contexto de origem para o frontend exibir valores explícitos
+        "monthly_income_base": monthly_income,
+        "pct_savings_used": pct_savings,
+        "income_source": income_source,
     }
 
     if user_id:
