@@ -366,7 +366,8 @@ class ConsensusEngine:
     async def run_consensus_loop(
         self,
         financial_summary: Dict[str, Any],
-        force_recalculate: bool = False
+        force_recalculate: bool = False,
+        user_id: Optional[int] = None
     ) -> ConsensusExecutionResult:
         """
         Executa o fluxo completo:
@@ -377,7 +378,7 @@ class ConsensusEngine:
         """
         # 1. Verificar cache existente
         if not force_recalculate:
-            cached = await db_manager.get_active_cache(max_age_hours=24)
+            cached = await db_manager.get_active_cache(max_age_hours=24, user_id=user_id)
             if cached:
                 logger.info("Retornando consenso do cache ativo.")
                 return ConsensusExecutionResult(
@@ -434,7 +435,7 @@ class ConsensusEngine:
         if not all_collected_responses:
             logger.warning("Todos os 5 provedores indisponíveis/não configurados. Ativando fallback determinístico local.")
             local_res = compute_deterministic_local_allocation(financial_summary)
-            await db_manager.save_cache(local_res)
+            await db_manager.save_cache(local_res, user_id=user_id)
             return ConsensusExecutionResult(
                 allocation=local_res["allocation"],
                 confidence_score=local_res["confidence_score"],
@@ -489,7 +490,7 @@ class ConsensusEngine:
             "provider_metadata": meta
         }
 
-        await db_manager.save_cache(data_to_cache)
+        await db_manager.save_cache(data_to_cache, user_id=user_id)
 
         return ConsensusExecutionResult(
             allocation=final_alloc,

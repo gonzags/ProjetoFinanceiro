@@ -20,7 +20,7 @@
         <div class="lh-logo-icon" aria-hidden="true">LH</div>
         <div class="lh-brand-text">
           <h1>Ledger Horizon</h1>
-          <p>Plataforma Analítica Financeira & Engenharia de Analytics • Pedro Silva</p>
+          <p>Plataforma Analítica Financeira & Engenharia de Analytics • {{ user_name }}</p>
         </div>
       </div>
 
@@ -39,6 +39,14 @@
           </svg>
           <span>Ajustar Parâmetros</span>
         </button>
+
+        {% if user %}
+        <form action="/logout" method="POST" style="margin: 0; display: inline;">
+          <button type="submit" class="lh-btn" style="padding: 6px 12px; font-size: 0.85rem;" title="Encerrar sessão">
+            Sair
+          </button>
+        </form>
+        {% endif %}
 
         <!-- Toggle Modo Escuro / Claro -->
         <button class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Alternar modo de contraste">
@@ -66,19 +74,19 @@
         <div class="lh-kpi-card" style="--card-accent: var(--lh-cobalt);">
           <div class="lh-kpi-label">Entradas Totais (Outubro)</div>
           <div class="lh-kpi-value tabular-nums" id="kpiIncome">R$ 2.133,42</div>
-          <div class="lh-kpi-subtitle">Salário R$ 1.843,42 + Extras R$ 290,00</div>
+          <div class="lh-kpi-subtitle" id="kpiIncomeSub">Salário R$ 1.843,42 + Extras R$ 290,00</div>
         </div>
 
         <div class="lh-kpi-card" style="--card-accent: var(--lh-cobalt);">
           <div class="lh-kpi-label">Custos Fixos Contratados</div>
           <div class="lh-kpi-value tabular-nums" id="kpiFixed">R$ 285,00</div>
-          <div class="lh-kpi-subtitle">13,3% da renda • 5 serviços cadastrados</div>
+          <div class="lh-kpi-subtitle" id="kpiFixedSub">13,3% da renda • 5 serviços cadastrados</div>
         </div>
 
         <div class="lh-kpi-card" style="--card-accent: var(--lh-amber-ui);">
           <div class="lh-kpi-label">Compromissos & Dívidas</div>
           <div class="lh-kpi-value tabular-nums" id="kpiDebts">R$ 1.736,83</div>
-          <div class="lh-kpi-subtitle">PicPay R$ 539 • Nu R$ 697 • Viagem R$ 500</div>
+          <div class="lh-kpi-subtitle" id="kpiDebtsSub">PicPay R$ 539 • Nu R$ 697,83 • Viagem R$ 500</div>
         </div>
 
         <div class="lh-kpi-card" style="--card-accent: var(--lh-green);">
@@ -98,18 +106,18 @@
             </svg>
             <span>The Debt-Free Horizon Gauge (Régua de Liquidez)</span>
           </div>
-          <div class="lh-horizon-meta tabular-nums">
-            Alvo de Liberdade: <strong>{{ target_liberty }}</strong> • Restam <strong>{{ months_remaining }} meses</strong>
+          <div class="lh-horizon-meta tabular-nums" id="gaugeMeta">
+            Alvo de Liberdade: <strong>{{ target_liberty }}</strong> • Restam <strong>{{ months_remaining }} meses</strong> (<span id="gaugePctLabel">38%</span> do horizonte)
           </div>
         </div>
 
-        <!-- Barra de Progresso Acessível -->
-        <div class="lh-gauge-track" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso rumo à liquidação das dívidas de cartão">
-          <div class="lh-gauge-fill" style="width: 38%;"></div>
+        <!-- Barra de Progresso Acessível Dinâmica -->
+        <div class="lh-gauge-track" id="gaugeTrack" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="Progresso rumo à liquidação das dívidas de cartão">
+          <div class="lh-gauge-fill" id="gaugeFill" style="width: 38%;"></div>
         </div>
 
-        <!-- Marcos Principais da Trajetória -->
-        <div class="lh-milestones-grid">
+        <!-- Marcos Principais da Trajetória (Dinamizados via JS) -->
+        <div class="lh-milestones-grid" id="milestonesGrid">
           <div class="lh-milestone-item">
             <div class="lh-milestone-month">Outubro 2026</div>
             <div class="lh-milestone-details">Zona Crítica (Sobra R$ 111,59)</div>
@@ -191,7 +199,11 @@
   <!-- Modal do Questionário Financeiro -->
   {% include 'components/questionnaire.html' %}
 
-  <!-- JavaScript do Dashboard -->
+  <!-- Modal Interativo do Onboarding (5 Passos) -->
+  {% include 'components/onboarding_modal.html' %}
+
+  <!-- JavaScript do Dashboard e Onboarding -->
   <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/onboarding.js"></script>
 </body>
 </html>

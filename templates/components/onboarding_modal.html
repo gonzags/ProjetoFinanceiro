@@ -1,0 +1,197 @@
+<!-- Modal Interativo Obrigatório de Onboarding (5 Passos) -->
+<div id="onboardingModal" class="lh-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" style="display: none; z-index: 9999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);">
+  <div class="lh-modal" style="max-width: 580px; width: 92%; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+    
+    <!-- Header do Wizard -->
+    <div style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span class="lh-badge lh-badge-amber" id="onboardingStepBadge" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
+          Passo 1 de 5
+        </span>
+        <span id="onboardingStepPercent" style="font-size: 0.8rem; font-weight: 600; color: var(--lh-text-muted);">
+          20% concluído
+        </span>
+      </div>
+      
+      <!-- Barra de Progresso Visual -->
+      <div style="width: 100%; height: 6px; background: var(--lh-border); border-radius: 999px; overflow: hidden; margin-bottom: 16px;">
+        <div id="onboardingProgressBar" style="width: 20%; height: 100%; background: var(--lh-primary); transition: width 0.3s ease;"></div>
+      </div>
+
+      <h2 id="onboardingTitle" style="font-size: 1.25rem; font-weight: 700; color: var(--lh-text); margin: 0 0 4px;">
+        Perfil Financeiro Individual
+      </h2>
+      <p id="onboardingSubtitle" style="font-size: 0.86rem; color: var(--lh-text-muted); margin: 0;">
+        Conte-nos sobre você para que o comitê de inteligência analise e personalize seu plano.
+      </p>
+    </div>
+
+    <!-- Feedback de Rascunho / Alerta -->
+    <div id="onboardingFeedback" style="display: none; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px;"></div>
+
+    <form id="onboardingForm" onsubmit="event.preventDefault();">
+      
+      <!-- ETAPA 1: Identificação & Atuação -->
+      <div class="onboarding-step" id="step1">
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obName" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Seu Nome Completo *
+          </label>
+          <input type="text" id="obName" class="lh-form-input" placeholder="Ex: Pedro Silva" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 14px;">
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obAge" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Sua Idade *
+            </label>
+            <input type="number" id="obAge" min="14" max="120" class="lh-form-input" placeholder="Ex: 28" required>
+          </div>
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obOccupation" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Área de Atuação / Profissão *
+            </label>
+            <input type="text" id="obOccupation" class="lh-form-input" placeholder="Ex: Engenheiro de Software, Designer..." required>
+          </div>
+        </div>
+      </div>
+
+      <!-- ETAPA 2: Renda & Benefícios -->
+      <div class="onboarding-step" id="step2" style="display: none;">
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obIncome" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Renda Líquida Mensal Fixa (R$) *
+          </label>
+          <input type="number" step="0.01" id="obIncome" class="lh-form-input" placeholder="Ex: 3500.00" required>
+          <small style="font-size: 0.75rem; color: var(--lh-text-muted);">O que realmente cai na sua conta mensalmente após impostos.</small>
+        </div>
+
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obExtraIncome" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Benefícios / Renda Extra Mensal (R$)
+          </label>
+          <input type="number" step="0.01" id="obExtraIncome" class="lh-form-input" placeholder="Ex: 500.00 (VR/VA, freelances)">
+        </div>
+      </div>
+
+      <!-- ETAPA 3: Gastos Fixos & Variáveis -->
+      <div class="onboarding-step" id="step3" style="display: none;">
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obFixedExpenses" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Gastos Fixos Essenciais Mensais (R$) *
+          </label>
+          <input type="number" step="0.01" id="obFixedExpenses" class="lh-form-input" placeholder="Ex: 1200.00" required>
+          <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Aluguel, luz, internet, academia, seguros e assinaturas fixas.</small>
+        </div>
+
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obVariableExpenses" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Estimativa de Gastos Variáveis / Lazer (R$) *
+          </label>
+          <input type="number" step="0.01" id="obVariableExpenses" class="lh-form-input" placeholder="Ex: 800.00" required>
+          <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Delivery, restaurantes, compras, passeios e imprevistos diários.</small>
+        </div>
+      </div>
+
+      <!-- ETAPA 4: Patrimônio Guardado & Destino -->
+      <div class="onboarding-step" id="step4" style="display: none;">
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obSavedAmount" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Quanto você possui guardado / investido atualmente? (R$)
+          </label>
+          <input type="number" step="0.01" id="obSavedAmount" class="lh-form-input" placeholder="0.00">
+        </div>
+
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obSavedDestination" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Qual o principal destino ou objetivo para suas reservas?
+          </label>
+          <select id="obSavedDestination" class="lh-form-input" style="cursor: pointer;">
+            <option value="reserva_emergencia">Construção de Reserva de Emergência</option>
+            <option value="quitacao_dividas">Quitação e Amortização de Dívidas</option>
+            <option value="aposentadoria">Aposentadoria e Independência Financeira</option>
+            <option value="imovel_veiculo">Compra de Imóvel ou Veículo</option>
+            <option value="viagem">Viagem ou Projeto Pessoal</option>
+            <option value="sem_objetivo">Ainda não defini um objetivo</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ETAPA 5: Investimentos & Perfil de Risco -->
+      <div class="onboarding-step" id="step5" style="display: none;">
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obInvests" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Você já investe ou tem interesse em investir? *
+          </label>
+          <select id="obInvests" class="lh-form-input" style="cursor: pointer;">
+            <option value="ja_investe_regular">Sim, já invisto regularmente</option>
+            <option value="ja_investe_pouco">Sim, mas ainda muito pouco</option>
+            <option value="gostaria_iniciar">Não invisto, mas gostaria de começar agora</option>
+            <option value="nao_interesse">No momento meu foco é apenas organizar as contas</option>
+          </select>
+        </div>
+
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Classes de ativos de seu interesse:
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="obAssetType" value="renda_fixa" checked> Renda Fixa / Tesouro
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="obAssetType" value="acoes_fiis"> Ações e FIIs
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="obAssetType" value="cripto"> Criptoativos
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="obAssetType" value="negocio"> Negócio Próprio
+            </label>
+          </div>
+        </div>
+
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Perfil de Tolerância a Risco:
+          </label>
+          <div style="display: flex; gap: 16px; font-size: 0.85rem;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="obRiskTolerance" value="conservador"> Conservador
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="obRiskTolerance" value="moderado" checked> Moderado
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="radio" name="obRiskTolerance" value="arrojado"> Arrojado
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Ações do Rodapé -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--lh-border); gap: 8px; flex-wrap: wrap;">
+        <div>
+          <button type="button" id="btnObPrev" class="lh-btn lh-btn-sm" onclick="onboardingPrevStep()" style="display: none;">
+            ← Voltar
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" id="btnObDraft" class="lh-btn lh-btn-sm" onclick="saveOnboardingDraft()" style="color: var(--lh-text-muted);">
+            Salvar rascunho e continuar depois
+          </button>
+          
+          <button type="button" id="btnObNext" class="lh-btn lh-btn-primary" onclick="onboardingNextStep()">
+            Próximo →
+          </button>
+
+          <button type="button" id="btnObSubmit" class="lh-btn lh-btn-primary" onclick="submitOnboardingFinal()" style="display: none; background-color: var(--lh-primary);">
+            Concluir e Analisar com IA
+          </button>
+        </div>
+      </div>
+
+    </form>
+  </div>
+</div>
