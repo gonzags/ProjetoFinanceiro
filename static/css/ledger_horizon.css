@@ -36,7 +36,7 @@
 
   /* Fontes */
   --lh-font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --lh-font-data: 'IBM Plex Sans', monospace;
+  --lh-font-data: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   
   --lh-radius-sm: 6px;
   --lh-radius-md: 10px;

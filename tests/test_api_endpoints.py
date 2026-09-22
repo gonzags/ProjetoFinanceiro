@@ -28,7 +28,7 @@ def test_index_page_rendered(client):
     assert resp.status_code == 200
     assert "Ledger Horizon" in resp.text
     assert "The Debt-Free Horizon Gauge" in resp.text
-    assert "Pedro Silva" in resp.text
+    assert db_manager.get_display_name() in resp.text
     # Headers de segurança
     assert resp.headers.get("X-Content-Type-Options") == "nosniff"
     assert resp.headers.get("X-Frame-Options") == "DENY"
@@ -90,20 +90,29 @@ def test_api_methodology_selector(client):
 
 
 def test_api_questionnaire_and_cache_invalidation(client):
-    """Atualizar o questionário deve invalidar o cache ativo de consenso."""
+    """Atualizar o questionário deve invalidar o cache ativo de consenso e salvar todos os campos."""
     # Garante que há um cache
     client.get("/api/consensus?month=Outubro")
 
-    # Envia atualização
+    # Envia atualização completa incluindo custos fixos e compromissos pontuais
     update_payload = {
         "salary_net": 1900.00,
-        "one_off_commitments": [{"name": "Ajuste", "amount": 200.0, "month": "Outubro"}]
+        "fixed_expenses": [
+            {"name": "Academia", "amount": 170.0, "category": "Saúde"},
+            {"name": "Internet", "amount": 100.0, "category": "Conectividade"}
+        ],
+        "one_off_commitments": [
+            {"name": "Viagem", "amount": 400.0, "month": "Outubro"},
+            {"name": "Quitação amigo", "amount": 70.0, "month": "Outubro"}
+        ]
     }
     resp = client.post("/api/questionnaire", json=update_payload)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "success"
     assert data["updated_summary"]["salary_net"] == 1900.00
+    assert data["updated_summary"]["fixed_costs"] == 270.00
+    assert data["updated_summary"]["special_events"] == 470.00
 
     # Cache deve ter sido invalidado no gerenciador
     active_cache = db_manager.demo_manager.get_active_cache(max_age_hours=24)
@@ -124,3 +133,20 @@ def test_recalculate_consensus_rate_limiting(client):
     # Chamada 4 - Deve estourar o limite de 3/hora por IP
     r4 = client.post("/api/consensus/recalculate?month=Outubro")
     assert r4.status_code == 429
+
+
+def test_enable_auth_toggle_behavior(client, monkeypatch):
+    """Verifica a alternância de comportamento entre ENABLE_AUTH=False e ENABLE_AUTH=True."""
+    import app as app_module
+
+    # 1. Com ENABLE_AUTH=False (padrão): rota / é pública
+    monkeypatch.setattr(app_module, "ENABLE_AUTH", False)
+    resp_false = client.get("/", follow_redirects=False)
+    assert resp_false.status_code == 200
+
+    # 2. Com ENABLE_AUTH=True: rota / redireciona para login
+    monkeypatch.setattr(app_module, "ENABLE_AUTH", True)
+    resp_true = client.get("/", follow_redirects=False)
+    assert resp_true.status_code == 303
+    assert "/login" in resp_true.headers.get("Location")
+

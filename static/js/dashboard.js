@@ -181,6 +181,62 @@ function refreshChartsTheme() {
   }
 }
 
+let currentTimeline = [];
+let currentKPIs = null;
+let lastActiveElement = null;
+
+// -----------------------------------------------------------------------------
+// Régua de Liquidez Dinâmica (The Debt-Free Horizon Gauge)
+// -----------------------------------------------------------------------------
+function updateHorizonGauge(timeline, kpis) {
+  if (!timeline || timeline.length === 0) return;
+  const oct = timeline[0];
+
+  // Cálculo do percentual de progresso de libertação de dívidas
+  const freePct = kpis?.metrics?.gauge_progress_pct ?? 
+    Math.round(((oct.total_income - oct.debts_total) / oct.total_income) * 100);
+  const safePct = Math.max(0, Math.min(100, Math.round(freePct)));
+
+  const fillEl = document.getElementById('gaugeFill');
+  const trackEl = document.getElementById('gaugeTrack');
+  const pctLabel = document.getElementById('gaugePctLabel');
+
+  if (fillEl) fillEl.style.width = `${safePct}%`;
+  if (trackEl) {
+    trackEl.setAttribute('aria-valuenow', safePct);
+    trackEl.setAttribute('aria-label', `Progresso rumo à liquidação das dívidas: ${safePct}% da renda livre`);
+  }
+  if (pctLabel) pctLabel.textContent = `${safePct}%`;
+
+  // Atualização dinâmica dos marcos na timeline
+  const milestonesGrid = document.getElementById('milestonesGrid');
+  if (milestonesGrid && timeline.length >= 7) {
+    const m0 = timeline[0]; // Outubro
+    const m1 = timeline[1]; // Novembro
+    const m2 = timeline[2]; // Dezembro
+    const m6 = timeline[6]; // Abril+
+
+    milestonesGrid.innerHTML = `
+      <div class="lh-milestone-item">
+        <div class="lh-milestone-month">${m0.month} 2026</div>
+        <div class="lh-milestone-details">${m0.status_label || 'Zona Crítica'} (Sobra ${formatCurrency(m0.net_surplus)})</div>
+      </div>
+      <div class="lh-milestone-item">
+        <div class="lh-milestone-month">${m1.month} 2026</div>
+        <div class="lh-milestone-details">Alívio (+${formatCurrency(m1.net_surplus)}) • Reserva</div>
+      </div>
+      <div class="lh-milestone-item">
+        <div class="lh-milestone-month">${m2.month} 2026</div>
+        <div class="lh-milestone-details">Folga Sólida (+${formatCurrency(m2.net_surplus)})</div>
+      </div>
+      <div class="lh-milestone-item">
+        <div class="lh-milestone-month">${m6.month} 2027+</div>
+        <div class="lh-milestone-details text-green"><strong>Liberdade: +${formatCurrency(m6.net_surplus)} livre</strong></div>
+      </div>
+    `;
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Chamadas à API REST
 // -----------------------------------------------------------------------------
@@ -189,7 +245,9 @@ async function loadTimeline() {
     const res = await fetch('/api/timeline');
     if (!res.ok) throw new Error('Falha ao carregar timeline');
     const data = await res.json();
+    currentTimeline = data;
     initTimelineChart(data);
+    updateHorizonGauge(currentTimeline, currentKPIs);
   } catch (e) {
     console.error('Erro na timeline:', e);
   }
@@ -200,7 +258,9 @@ async function loadKPIs() {
     const res = await fetch('/api/kpis?month=Outubro');
     if (!res.ok) throw new Error('Falha ao carregar KPIs');
     const data = await res.json();
+    currentKPIs = data;
     const s = data.summary;
+    const m = data.metrics;
 
     document.getElementById('kpiIncome').textContent = formatCurrency(s.total_income);
     document.getElementById('kpiFixed').textContent = formatCurrency(s.fixed_costs);
@@ -208,6 +268,21 @@ async function loadKPIs() {
     
     const surplusEl = document.getElementById('kpiSurplus');
     surplusEl.textContent = (s.net_surplus >= 0 ? '+ ' : '- ') + formatCurrency(Math.abs(s.net_surplus));
+
+    // Subtítulos dinâmicos
+    const incomeSub = document.getElementById('kpiIncomeSub');
+    if (incomeSub) incomeSub.textContent = `Salário ${formatCurrency(s.salary_net)} + Extras ${formatCurrency(s.receivables || 0)}`;
+
+    const fixedSub = document.getElementById('kpiFixedSub');
+    if (fixedSub) fixedSub.textContent = `${m.fixed_ratio_pct}% da renda líquida`;
+
+    const debtsSub = document.getElementById('kpiDebtsSub');
+    if (debtsSub) debtsSub.textContent = `PicPay ${formatCurrency(s.picpay_amount)} • Nu ${formatCurrency(s.nubank_amount)}`;
+
+    const surplusDiag = document.getElementById('kpiSurplusDiag');
+    if (surplusDiag) surplusDiag.textContent = s.net_surplus > 500 ? 'Folga sólida consolidada' : 'Zona crítica controlada • Saldo positivo';
+
+    updateHorizonGauge(currentTimeline, currentKPIs);
   } catch (e) {
     console.error('Erro nos KPIs:', e);
   }
@@ -350,35 +425,107 @@ async function switchMethodology(methodology, btnElement) {
 }
 
 // -----------------------------------------------------------------------------
-// Modal do Questionário
+// Modal do Questionário com Focus Trap e Esc Key
 // -----------------------------------------------------------------------------
+function updateFixedTotalPreview() {
+  const ac = parseFloat(document.getElementById('inputFixedAcademia')?.value) || 0;
+  const nr = parseFloat(document.getElementById('inputFixedNetRes')?.value) || 0;
+  const nm = parseFloat(document.getElementById('inputFixedNetMov')?.value) || 0;
+  const sp = parseFloat(document.getElementById('inputFixedSpotify')?.value) || 0;
+  const gg = parseFloat(document.getElementById('inputFixedGoogle')?.value) || 0;
+  const total = ac + nr + nm + sp + gg;
+  const lbl = document.getElementById('labelFixedTotal');
+  if (lbl) lbl.textContent = `Total: ${formatCurrency(total)}`;
+}
+
+function handleModalKeyDown(e) {
+  const modal = document.getElementById('questionnaireModal');
+  if (!modal || !modal.classList.contains('open')) return;
+
+  if (e.key === 'Escape') {
+    toggleQuestionnaireModal(false);
+    return;
+  }
+
+  // Focus trap
+  if (e.key === 'Tab') {
+    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    const firstElement = focusable[0];
+    const lastElement = focusable[focusable.length - 1];
+
+    if (e.shiftKey) {
+      if (document.activeElement === firstElement) {
+        lastElement.focus();
+        e.preventDefault();
+      }
+    } else {
+      if (document.activeElement === lastElement) {
+        firstElement.focus();
+        e.preventDefault();
+      }
+    }
+  }
+}
+
 function toggleQuestionnaireModal(show) {
   const modal = document.getElementById('questionnaireModal');
-  if (modal) {
-    if (show) {
-      modal.classList.add('open');
-    } else {
-      modal.classList.remove('open');
+  if (!modal) return;
+
+  if (show) {
+    lastActiveElement = document.activeElement;
+    modal.classList.add('open');
+    document.addEventListener('keydown', handleModalKeyDown);
+    updateFixedTotalPreview();
+
+    // Foca o primeiro input acessível
+    setTimeout(() => {
+      const firstInput = document.getElementById('inputSalaryNet');
+      if (firstInput) firstInput.focus();
+    }, 50);
+  } else {
+    modal.classList.remove('open');
+    document.removeEventListener('keydown', handleModalKeyDown);
+    if (lastActiveElement && typeof lastActiveElement.focus === 'function') {
+      lastActiveElement.focus();
     }
   }
 }
 
 async function submitQuestionnaire(event) {
   event.preventDefault();
-  const salary = parseFloat(document.getElementById('inputSalaryNet').value);
-  const picpay = parseFloat(document.getElementById('inputPicPay').value);
-  const nubank = parseFloat(document.getElementById('inputNubank').value);
-  const special = parseFloat(document.getElementById('inputSpecialEvent').value);
+  const salary = parseFloat(document.getElementById('inputSalaryNet').value) || 0;
+  const picpay = parseFloat(document.getElementById('inputPicPay').value) || 0;
+  const nubank = parseFloat(document.getElementById('inputNubank').value) || 0;
+  const special = parseFloat(document.getElementById('inputSpecialEvent').value) || 0;
+  const friendDebt = parseFloat(document.getElementById('inputFriendDebt').value) || 0;
+
+  // Coleta completa dos custos fixos editados
+  const fixedExpenses = [
+    { name: "Academia", amount: parseFloat(document.getElementById('inputFixedAcademia')?.value) || 0, category: "Saúde" },
+    { name: "Internet Residencial", amount: parseFloat(document.getElementById('inputFixedNetRes')?.value) || 0, category: "Conectividade" },
+    { name: "Internet Móvel", amount: parseFloat(document.getElementById('inputFixedNetMov')?.value) || 0, category: "Conectividade" },
+    { name: "Spotify", amount: parseFloat(document.getElementById('inputFixedSpotify')?.value) || 0, category: "Assinaturas" },
+    { name: "Armazenamento Google", amount: parseFloat(document.getElementById('inputFixedGoogle')?.value) || 0, category: "Assinaturas" }
+  ];
+
+  // Coleta completa dos compromissos pontuais (Viagem E Amigo)
+  const oneOffs = [];
+  if (special > 0) {
+    oneOffs.push({ name: "Viagem / Pontual", amount: special, month: "Outubro" });
+  }
+  if (friendDebt > 0) {
+    oneOffs.push({ name: "Quitação amigo", amount: friendDebt, month: "Outubro" });
+  }
 
   const payload = {
     salary_net: salary,
+    fixed_expenses: fixedExpenses,
     card_schedules: {
       PicPay: { closing_day: 27, installments: { Outubro: picpay } },
       Nubank: { closing_day: 4, installments: { Outubro: nubank } }
     },
-    one_off_commitments: [
-      { name: "Viagem / Pontual", amount: special, month: "Outubro" }
-    ]
+    one_off_commitments: oneOffs
   };
 
   const saveBtn = document.getElementById('saveQuestionnaireBtn');
@@ -394,7 +541,7 @@ async function submitQuestionnaire(event) {
     if (!res.ok) throw new Error('Erro ao salvar');
 
     toggleQuestionnaireModal(false);
-    // Recarregar dados da interface
+    // Recarregar dados da interface de forma coordenada
     await loadTimeline();
     await loadKPIs();
     await loadConsensus();
@@ -416,3 +563,4 @@ document.addEventListener('DOMContentLoaded', () => {
   loadKPIs();
   loadConsensus();
 });
+
