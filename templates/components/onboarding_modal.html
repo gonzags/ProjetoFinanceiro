@@ -1,21 +1,21 @@
-<!-- Modal Interativo Obrigatório de Onboarding (5 Passos) -->
+<!-- Modal Interativo Obrigatório de Onboarding (6 Passos) -->
 <div id="onboardingModal" class="lh-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" style="display: none; z-index: 9999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);">
-  <div class="lh-modal" style="max-width: 580px; width: 92%; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
-    
+  <div class="lh-modal" style="max-width: 620px; width: 95%; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); max-height: 90vh; overflow-y: auto;">
+
     <!-- Header do Wizard -->
     <div style="margin-bottom: 20px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span class="lh-badge lh-badge-amber" id="onboardingStepBadge" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
-          Passo 1 de 5
+          Passo 1 de 6
         </span>
         <span id="onboardingStepPercent" style="font-size: 0.8rem; font-weight: 600; color: var(--lh-text-muted);">
-          20% concluído
+          17% concluído
         </span>
       </div>
-      
+
       <!-- Barra de Progresso Visual -->
       <div style="width: 100%; height: 6px; background: var(--lh-border); border-radius: 999px; overflow: hidden; margin-bottom: 16px;">
-        <div id="onboardingProgressBar" style="width: 20%; height: 100%; background: var(--lh-primary); transition: width 0.3s ease;"></div>
+        <div id="onboardingProgressBar" style="width: 17%; height: 100%; background: var(--lh-primary); transition: width 0.3s ease;"></div>
       </div>
 
       <h2 id="onboardingTitle" style="font-size: 1.25rem; font-weight: 700; color: var(--lh-text); margin: 0 0 4px;">
@@ -30,8 +30,10 @@
     <div id="onboardingFeedback" style="display: none; padding: 10px 14px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px;"></div>
 
     <form id="onboardingForm" onsubmit="event.preventDefault();">
-      
+
+      <!-- ================================================================ -->
       <!-- ETAPA 1: Identificação & Atuação -->
+      <!-- ================================================================ -->
       <div class="onboarding-step" id="step1">
         <div class="lh-form-group" style="margin-bottom: 14px;">
           <label class="lh-form-label" for="obName" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
@@ -56,7 +58,9 @@
         </div>
       </div>
 
+      <!-- ================================================================ -->
       <!-- ETAPA 2: Renda & Benefícios -->
+      <!-- ================================================================ -->
       <div class="onboarding-step" id="step2" style="display: none;">
         <div class="lh-form-group" style="margin-bottom: 14px;">
           <label class="lh-form-label" for="obIncome" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
@@ -72,86 +76,156 @@
           </label>
           <input type="number" step="0.01" id="obExtraIncome" class="lh-form-input" placeholder="Ex: 500.00 (VR/VA, freelances)">
         </div>
-      </div>
 
-      <!-- ETAPA 3: Gastos Fixos & Variáveis -->
-      <div class="onboarding-step" id="step3" style="display: none;">
-        <div class="lh-form-group" style="margin-bottom: 14px;">
-          <label class="lh-form-label" for="obFixedExpenses" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Gastos Fixos Essenciais Mensais (R$) *
-          </label>
-          <input type="number" step="0.01" id="obFixedExpenses" class="lh-form-input" placeholder="Ex: 1200.00" required>
-          <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Aluguel, luz, internet, academia, seguros e assinaturas fixas.</small>
-        </div>
-
-        <div class="lh-form-group" style="margin-bottom: 14px;">
-          <label class="lh-form-label" for="obVariableExpenses" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Estimativa de Gastos Variáveis / Lazer (R$) *
-          </label>
-          <input type="number" step="0.01" id="obVariableExpenses" class="lh-form-input" placeholder="Ex: 800.00" required>
-          <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Delivery, restaurantes, compras, passeios e imprevistos diários.</small>
-        </div>
-      </div>
-
-      <!-- ETAPA 4: Patrimônio Guardado & Destino -->
-      <div class="onboarding-step" id="step4" style="display: none;">
-        <div class="lh-form-group" style="margin-bottom: 14px;">
+        <div class="lh-form-group">
           <label class="lh-form-label" for="obSavedAmount" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Quanto você possui guardado / investido atualmente? (R$)
+            Quanto você possui guardado / investido hoje? (R$)
           </label>
           <input type="number" step="0.01" id="obSavedAmount" class="lh-form-input" placeholder="0.00">
-        </div>
-
-        <div class="lh-form-group" style="margin-bottom: 14px;">
-          <label class="lh-form-label" for="obSavedDestination" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Qual o principal destino ou objetivo para suas reservas?
-          </label>
-          <select id="obSavedDestination" class="lh-form-input" style="cursor: pointer;">
-            <option value="reserva_emergencia">Construção de Reserva de Emergência</option>
-            <option value="quitacao_dividas">Quitação e Amortização de Dívidas</option>
-            <option value="aposentadoria">Aposentadoria e Independência Financeira</option>
-            <option value="imovel_veiculo">Compra de Imóvel ou Veículo</option>
-            <option value="viagem">Viagem ou Projeto Pessoal</option>
-            <option value="sem_objetivo">Ainda não defini um objetivo</option>
-          </select>
+          <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Poupança, CDB, Tesouro, corretora, etc.</small>
         </div>
       </div>
 
+      <!-- ================================================================ -->
+      <!-- ETAPA 3: Gastos Fixos Itemizados -->
+      <!-- ================================================================ -->
+      <div class="onboarding-step" id="step3" style="display: none;">
+        <p style="font-size: 0.82rem; color: var(--lh-text-muted); margin-bottom: 12px;">
+          Liste seus gastos fixos mensais — quanto mais detalhar, mais precisa será a análise da IA.
+        </p>
+
+        <!-- Lista dinâmica de despesas -->
+        <div id="obExpenseList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+          <!-- Linha template (copiada pelo JS ao clicar "+ Adicionar") -->
+          <div class="ob-expense-row" style="display: grid; grid-template-columns: 2fr 1.2fr 1.4fr auto; gap: 8px; align-items: end;">
+            <div>
+              <label style="font-size: 0.78rem; color: var(--lh-text-muted); font-weight: 600;">Descrição</label>
+              <input type="text" class="lh-form-input ob-expense-name" placeholder="Ex: Aluguel" style="font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; color: var(--lh-text-muted); font-weight: 600;">Valor (R$)</label>
+              <input type="number" step="0.01" class="lh-form-input ob-expense-amount" placeholder="0.00" style="font-size: 0.85rem;">
+            </div>
+            <div>
+              <label style="font-size: 0.78rem; color: var(--lh-text-muted); font-weight: 600;">Categoria</label>
+              <select class="lh-form-input ob-expense-category" style="font-size: 0.85rem; cursor: pointer;">
+                <option value="moradia">🏠 Moradia</option>
+                <option value="alimentacao">🍽️ Alimentação</option>
+                <option value="saude">💊 Saúde</option>
+                <option value="conectividade">📶 Conectividade</option>
+                <option value="transporte">🚗 Transporte</option>
+                <option value="assinaturas" selected>📱 Assinaturas</option>
+                <option value="lazer">🎮 Lazer</option>
+                <option value="educacao">📚 Educação</option>
+                <option value="vestuario">👕 Vestuário</option>
+                <option value="divida">💳 Dívida/Parcela</option>
+                <option value="outro">📦 Outro</option>
+              </select>
+            </div>
+            <div style="padding-bottom: 2px;">
+              <button type="button" onclick="removeExpenseRow(this)" style="background: none; border: none; color: var(--lh-red, #ef4444); cursor: pointer; font-size: 1.1rem; padding: 6px;" title="Remover">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" onclick="addExpenseRow()" class="lh-btn lh-btn-sm" style="width: 100%; border: 1px dashed var(--lh-border); background: transparent; color: var(--lh-primary);">
+          + Adicionar custo fixo
+        </button>
+
+        <div style="margin-top: 14px; padding: 10px 12px; background: var(--lh-surface-2, rgba(100,116,139,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--lh-text-muted);">
+          <strong>Total de custos fixos:</strong>
+          <span id="obExpensesTotal" style="font-weight: 700; color: var(--lh-text);">R$ 0,00</span>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- ETAPA 4: Objetivo Financeiro Principal -->
+      <!-- ================================================================ -->
+      <div class="onboarding-step" id="step4" style="display: none;">
+        <div class="lh-form-group" style="margin-bottom: 14px;">
+          <label class="lh-form-label" for="obGoalType" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Qual é seu objetivo financeiro principal? *
+          </label>
+          <select id="obGoalType" class="lh-form-input" style="cursor: pointer;" onchange="updateGoalFields()">
+            <option value="emergencia">🛡️ Reserva de Emergência</option>
+            <option value="divida">💳 Quitação de Dívidas</option>
+            <option value="imovel">🏠 Compra de Imóvel</option>
+            <option value="viagem">✈️ Viagem / Experiência Específica</option>
+            <option value="aposentadoria">🌅 Aposentadoria Antecipada</option>
+            <option value="independencia">🚀 Independência Financeira</option>
+            <option value="outro">🎯 Outro</option>
+          </select>
+        </div>
+
+        <div id="obGoalTitleGroup" class="lh-form-group" style="margin-bottom: 14px; display: none;">
+          <label class="lh-form-label" for="obGoalTitle" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Descreva seu objetivo
+          </label>
+          <input type="text" id="obGoalTitle" class="lh-form-input" placeholder="Ex: Fundo de emergência de 6 meses">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div class="lh-form-group" id="obGoalAmountGroup">
+            <label class="lh-form-label" for="obGoalAmount" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Valor alvo (R$)
+            </label>
+            <input type="number" step="0.01" id="obGoalAmount" class="lh-form-input" placeholder="Ex: 20000.00">
+            <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Deixe em branco se ainda não souber.</small>
+          </div>
+          <div class="lh-form-group">
+            <label class="lh-form-label" for="obGoalDate" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+              Prazo desejado
+            </label>
+            <input type="month" id="obGoalDate" class="lh-form-input">
+            <small style="font-size: 0.75rem; color: var(--lh-text-muted);">Mês/Ano alvo (opcional).</small>
+          </div>
+        </div>
+
+        <div class="lh-form-group">
+          <label class="lh-form-label" for="obGoalCurrent" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
+            Quanto já tem separado para esse objetivo? (R$)
+          </label>
+          <input type="number" step="0.01" id="obGoalCurrent" class="lh-form-input" placeholder="0.00">
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
       <!-- ETAPA 5: Investimentos & Perfil de Risco -->
+      <!-- ================================================================ -->
       <div class="onboarding-step" id="step5" style="display: none;">
         <div class="lh-form-group" style="margin-bottom: 14px;">
           <label class="lh-form-label" for="obInvests" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
             Você já investe ou tem interesse em investir? *
           </label>
           <select id="obInvests" class="lh-form-input" style="cursor: pointer;">
-            <option value="ja_investe_regular">Sim, já invisto regularmente</option>
-            <option value="ja_investe_pouco">Sim, mas ainda muito pouco</option>
-            <option value="gostaria_iniciar">Não invisto, mas gostaria de começar agora</option>
-            <option value="nao_interesse">No momento meu foco é apenas organizar as contas</option>
+            <option value="ja_investe">Sim, já invisto regularmente</option>
+            <option value="quer_comecar">Não invisto, mas quero começar agora</option>
+            <option value="nao_investe">No momento meu foco é organizar as contas</option>
+            <option value="experiente">Investidor experiente</option>
           </select>
         </div>
 
         <div class="lh-form-group" style="margin-bottom: 14px;">
           <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
-            Classes de ativos de seu interesse:
+            Classes de ativos de interesse:
           </label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem;">
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
               <input type="checkbox" name="obAssetType" value="renda_fixa" checked> Renda Fixa / Tesouro
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="obAssetType" value="acoes_fiis"> Ações e FIIs
+              <input type="checkbox" name="obAssetType" value="fiis"> FIIs (Fundos Imobiliários)
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" name="obAssetType" value="acoes"> Ações
             </label>
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
               <input type="checkbox" name="obAssetType" value="cripto"> Criptoativos
             </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-              <input type="checkbox" name="obAssetType" value="negocio"> Negócio Próprio
-            </label>
           </div>
         </div>
 
-        <div class="lh-form-group" style="margin-bottom: 14px;">
+        <div class="lh-form-group" style="margin-bottom: 20px;">
           <label class="lh-form-label" style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; color: var(--lh-text-muted);">
             Perfil de Tolerância a Risco:
           </label>
@@ -167,6 +241,30 @@
             </label>
           </div>
         </div>
+
+        <!-- Consentimento de Dados — OBRIGATÓRIO -->
+        <div style="background: var(--lh-surface-2, rgba(100,116,139,0.08)); border: 1px solid var(--lh-border); border-radius: 8px; padding: 14px;">
+          <p style="font-size: 0.8rem; font-weight: 700; color: var(--lh-text); margin: 0 0 8px;">
+            🔒 Aviso sobre Privacidade e Uso de Dados
+          </p>
+          <p style="font-size: 0.78rem; color: var(--lh-text-muted); margin: 0 0 10px; line-height: 1.5;">
+            Para gerar recomendações personalizadas, seus dados financeiros (renda, gastos, objetivos e perfil de risco)
+            são enviados para análise por modelos de inteligência artificial de terceiros:
+            <strong>Groq (Llama 3.3)</strong>, <strong>Google Gemini</strong>, <strong>Mistral AI</strong>,
+            <strong>OpenRouter</strong> e <strong>Cloudflare Workers AI</strong>.
+            <br><br>
+            <strong>Nenhum dado de identificação pessoal</strong> (nome, e-mail, CPF) é incluído nas consultas às IAs.
+            Apenas dados financeiros agregados são compartilhados.
+          </p>
+          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 0.82rem; color: var(--lh-text);">
+            <input type="checkbox" id="obDataConsent" name="data_consent" value="true"
+                   style="margin-top: 2px; flex-shrink: 0;" required>
+            <span>
+              Li e concordo com o envio dos meus dados financeiros para os modelos de IA listados acima, 
+              exclusivamente para fins de análise e recomendação personalizada. *
+            </span>
+          </label>
+        </div>
       </div>
 
       <!-- Barra de Ações do Rodapé -->
@@ -179,15 +277,15 @@
 
         <div style="display: flex; gap: 8px; align-items: center;">
           <button type="button" id="btnObDraft" class="lh-btn lh-btn-sm" onclick="saveOnboardingDraft()" style="color: var(--lh-text-muted);">
-            Salvar rascunho e continuar depois
+            Salvar rascunho
           </button>
-          
+
           <button type="button" id="btnObNext" class="lh-btn lh-btn-primary" onclick="onboardingNextStep()">
             Próximo →
           </button>
 
           <button type="button" id="btnObSubmit" class="lh-btn lh-btn-primary" onclick="submitOnboardingFinal()" style="display: none; background-color: var(--lh-primary);">
-            Concluir e Analisar com IA
+            Concluir e Analisar com IA ✓
           </button>
         </div>
       </div>
@@ -195,3 +293,71 @@
     </form>
   </div>
 </div>
+
+<script>
+// ============================================================================
+// Onboarding — Utilitários de UI (escopo local ao modal)
+// ============================================================================
+function addExpenseRow() {
+  const list = document.getElementById('obExpenseList');
+  const row = document.createElement('div');
+  row.className = 'ob-expense-row';
+  row.style.cssText = 'display: grid; grid-template-columns: 2fr 1.2fr 1.4fr auto; gap: 8px; align-items: end;';
+  row.innerHTML = `
+    <div>
+      <label style="font-size: 0.78rem; color: var(--lh-text-muted); font-weight: 600;">Descrição</label>
+      <input type="text" class="lh-form-input ob-expense-name" placeholder="Ex: Academia" style="font-size: 0.85rem;" oninput="updateExpensesTotal()">
+    </div>
+    <div>
+      <label style="font-size: 0.78rem; color: var(--lh-text-muted); font-weight: 600;">Valor (R$)</label>
+      <input type="number" step="0.01" class="lh-form-input ob-expense-amount" placeholder="0.00" style="font-size: 0.85rem;" oninput="updateExpensesTotal()">
+    </div>
+    <div>
+      <label style="font-size: 0.78rem; color: var(--lh-text-muted); font-weight: 600;">Categoria</label>
+      <select class="lh-form-input ob-expense-category" style="font-size: 0.85rem; cursor: pointer;">
+        <option value="moradia">🏠 Moradia</option>
+        <option value="alimentacao">🍽️ Alimentação</option>
+        <option value="saude">💊 Saúde</option>
+        <option value="conectividade">📶 Conectividade</option>
+        <option value="transporte">🚗 Transporte</option>
+        <option value="assinaturas" selected>📱 Assinaturas</option>
+        <option value="lazer">🎮 Lazer</option>
+        <option value="educacao">📚 Educação</option>
+        <option value="vestuario">👕 Vestuário</option>
+        <option value="divida">💳 Dívida/Parcela</option>
+        <option value="outro">📦 Outro</option>
+      </select>
+    </div>
+    <div style="padding-bottom: 2px;">
+      <button type="button" onclick="removeExpenseRow(this)" style="background: none; border: none; color: var(--lh-red, #ef4444); cursor: pointer; font-size: 1.1rem; padding: 6px;" title="Remover">✕</button>
+    </div>`;
+  list.appendChild(row);
+}
+
+function removeExpenseRow(btn) {
+  const rows = document.querySelectorAll('.ob-expense-row');
+  if (rows.length <= 1) return; // mantém pelo menos 1 linha
+  btn.closest('.ob-expense-row').remove();
+  updateExpensesTotal();
+}
+
+function updateExpensesTotal() {
+  let total = 0;
+  document.querySelectorAll('.ob-expense-amount').forEach(el => {
+    total += parseFloat(el.value) || 0;
+  });
+  document.getElementById('obExpensesTotal').textContent =
+    'R$ ' + total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function updateGoalFields() {
+  const type = document.getElementById('obGoalType').value;
+  const titleGroup = document.getElementById('obGoalTitleGroup');
+  titleGroup.style.display = type === 'outro' ? 'block' : 'none';
+}
+
+// Adicionar listener de input na primeira linha de despesa
+document.querySelectorAll('.ob-expense-amount').forEach(el => {
+  el.addEventListener('input', updateExpensesTotal);
+});
+</script>

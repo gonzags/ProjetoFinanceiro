@@ -11,6 +11,7 @@ Valida:
 """
 
 import re
+import uuid
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch
@@ -140,7 +141,7 @@ def test_register_and_login_flow(client):
     assert csrf_from_form == csrf_from_cookie
 
     # 2. Cadastro com dados válidos
-    unique_email = "test_user_auth_secure@ledgerhorizon.local"
+    unique_email = f"test_user_{uuid.uuid4().hex[:8]}@ledgerhorizon.local"
     reg_data = {
         "csrf_token": csrf_from_form,
         "name": "Maria Investidora",

@@ -1,10 +1,10 @@
 /**
- * onboarding.js - Gerenciador do Wizard Interativo de Onboarding (5 Passos)
+ * onboarding.js - Gerenciador do Wizard Interativo de Onboarding (6 Passos)
  * Ledger Horizon Financial Platform
  */
 
 let currentOnboardingStep = 1;
-const totalOnboardingSteps = 5;
+const totalOnboardingSteps = 5;  // Modal atual usa steps 1-5 (step3=despesas, step4=objetivo, step5=invest+consentimento)
 
 const stepHeaders = {
   1: {
@@ -13,29 +13,28 @@ const stepHeaders = {
     percent: "20% concluído"
   },
   2: {
-    title: "Rendimentos & Benefícios",
-    subtitle: "Informe quanto você recebe mensalmente para dimensionarmos seu fluxo de caixa real.",
+    title: "Rendimentos & Patrimônio",
+    subtitle: "Informe sua renda e quanto já tem guardado para dimensionarmos seu fluxo de caixa.",
     percent: "40% concluído"
   },
   3: {
-    title: "Despesas & Custos de Vida",
-    subtitle: "Mapeie suas despesas fixas e variáveis para calcularmos sua margem de sobrevivência.",
+    title: "Gastos Fixos Mensais",
+    subtitle: "Liste seus custos fixos mês a mês — quanto mais detalhar, mais precisa será a análise.",
     percent: "60% concluído"
   },
   4: {
-    title: "Patrimônio & Objetivos",
-    subtitle: "Nos diga o que você tem guardado e qual a sua prioridade financeira no momento.",
+    title: "Objetivo Financeiro Principal",
+    subtitle: "Defina sua meta principal para que a IA calcule o caminho mais eficiente até lá.",
     percent: "80% concluído"
   },
   5: {
-    title: "Investimentos & Perfil de Risco",
-    subtitle: "Defina como você lida com investimentos e o direcionamento para o comitê de IA.",
-    percent: "100% - Quase lá!"
+    title: "Perfil de Investimentos & Consentimento",
+    subtitle: "Defina seu perfil de risco e autorize o compartilhamento de dados com os modelos de IA.",
+    percent: "100% — Quase lá!"
   }
 };
 
 function updateOnboardingUI() {
-  // Esconder todos os passos e mostrar o atual
   for (let i = 1; i <= totalOnboardingSteps; i++) {
     const stepEl = document.getElementById(`step${i}`);
     if (stepEl) {
@@ -43,27 +42,25 @@ function updateOnboardingUI() {
     }
   }
 
-  // Atualizar textos e badges
   const info = stepHeaders[currentOnboardingStep];
-  const titleEl = document.getElementById("onboardingTitle");
+  const titleEl   = document.getElementById("onboardingTitle");
   const subtitleEl = document.getElementById("onboardingSubtitle");
-  const badgeEl = document.getElementById("onboardingStepBadge");
+  const badgeEl   = document.getElementById("onboardingStepBadge");
   const percentEl = document.getElementById("onboardingStepPercent");
-  const barEl = document.getElementById("onboardingProgressBar");
+  const barEl     = document.getElementById("onboardingProgressBar");
 
-  if (titleEl) titleEl.textContent = info.title;
+  if (titleEl)    titleEl.textContent    = info.title;
   if (subtitleEl) subtitleEl.textContent = info.subtitle;
-  if (badgeEl) badgeEl.textContent = `Passo ${currentOnboardingStep} de ${totalOnboardingSteps}`;
-  if (percentEl) percentEl.textContent = info.percent;
-  if (barEl) barEl.style.width = `${(currentOnboardingStep / totalOnboardingSteps) * 100}%`;
+  if (badgeEl)    badgeEl.textContent    = `Passo ${currentOnboardingStep} de ${totalOnboardingSteps}`;
+  if (percentEl)  percentEl.textContent  = info.percent;
+  if (barEl)      barEl.style.width      = `${(currentOnboardingStep / totalOnboardingSteps) * 100}%`;
 
-  // Botões de navegação
-  const btnPrev = document.getElementById("btnObPrev");
-  const btnNext = document.getElementById("btnObNext");
+  const btnPrev   = document.getElementById("btnObPrev");
+  const btnNext   = document.getElementById("btnObNext");
   const btnSubmit = document.getElementById("btnObSubmit");
 
-  if (btnPrev) btnPrev.style.display = currentOnboardingStep > 1 ? "inline-block" : "none";
-  if (btnNext) btnNext.style.display = currentOnboardingStep < totalOnboardingSteps ? "inline-block" : "none";
+  if (btnPrev)   btnPrev.style.display   = currentOnboardingStep > 1 ? "inline-block" : "none";
+  if (btnNext)   btnNext.style.display   = currentOnboardingStep < totalOnboardingSteps ? "inline-block" : "none";
   if (btnSubmit) btnSubmit.style.display = currentOnboardingStep === totalOnboardingSteps ? "inline-block" : "none";
 }
 
@@ -71,35 +68,30 @@ function validateCurrentStep() {
   hideOnboardingFeedback();
   if (currentOnboardingStep === 1) {
     const name = document.getElementById("obName")?.value.trim();
-    const age = parseInt(document.getElementById("obAge")?.value, 10);
-    const occ = document.getElementById("obOccupation")?.value.trim();
-    if (!name) {
-      showOnboardingFeedback("Por favor, preencha seu nome completo.", "error");
-      return false;
-    }
-    if (isNaN(age) || age < 14 || age > 120) {
-      showOnboardingFeedback("Por favor, insira uma idade válida (entre 14 e 120 anos).", "error");
-      return false;
-    }
-    if (!occ) {
-      showOnboardingFeedback("Por favor, informe sua profissão ou área de atuação.", "error");
-      return false;
-    }
+    const age  = parseInt(document.getElementById("obAge")?.value, 10);
+    const occ  = document.getElementById("obOccupation")?.value.trim();
+    if (!name) { showOnboardingFeedback("Por favor, preencha seu nome completo.", "error"); return false; }
+    if (isNaN(age) || age < 14 || age > 120) { showOnboardingFeedback("Por favor, insira uma idade válida (14–120).", "error"); return false; }
+    if (!occ) { showOnboardingFeedback("Por favor, informe sua profissão ou área.", "error"); return false; }
   } else if (currentOnboardingStep === 2) {
     const income = parseFloat(document.getElementById("obIncome")?.value);
-    if (isNaN(income) || income < 0) {
-      showOnboardingFeedback("Por favor, informe sua renda líquida mensal.", "error");
-      return false;
-    }
+    if (isNaN(income) || income <= 0) { showOnboardingFeedback("Por favor, informe sua renda líquida mensal.", "error"); return false; }
   } else if (currentOnboardingStep === 3) {
-    const fixed = parseFloat(document.getElementById("obFixedExpenses")?.value);
-    const variable = parseFloat(document.getElementById("obVariableExpenses")?.value);
-    if (isNaN(fixed) || fixed < 0) {
-      showOnboardingFeedback("Por favor, informe seus gastos fixos essenciais.", "error");
+    // Despesas itemizadas — pelo menos 1 linha com nome e valor
+    const names   = document.querySelectorAll(".ob-expense-name");
+    const amounts = document.querySelectorAll(".ob-expense-amount");
+    let hasValid = false;
+    for (let i = 0; i < names.length; i++) {
+      if (names[i].value.trim() && parseFloat(amounts[i].value) > 0) { hasValid = true; break; }
+    }
+    if (!hasValid) {
+      showOnboardingFeedback("Adicione pelo menos um custo fixo com nome e valor.", "error");
       return false;
     }
-    if (isNaN(variable) || variable < 0) {
-      showOnboardingFeedback("Por favor, informe uma estimativa para gastos variáveis.", "error");
+  } else if (currentOnboardingStep === 5) {
+    const consent = document.getElementById("obDataConsent");
+    if (consent && !consent.checked) {
+      showOnboardingFeedback("É necessário aceitar os termos de compartilhamento de dados para continuar.", "error");
       return false;
     }
   }
@@ -123,24 +115,66 @@ function onboardingPrevStep() {
 
 function collectOnboardingData(isDraft = false) {
   const assetCheckboxes = document.querySelectorAll('input[name="obAssetType"]:checked');
-  const selectedAssets = Array.from(assetCheckboxes).map(cb => cb.value);
-  const selectedRisk = document.querySelector('input[name="obRiskTolerance"]:checked')?.value || "moderado";
+  const selectedAssets  = Array.from(assetCheckboxes).map(cb => cb.value);
+  const selectedRisk    = document.querySelector('input[name="obRiskTolerance"]:checked')?.value || "moderado";
+  const dataConsent     = document.getElementById("obDataConsent")?.checked || false;
+
+  // Coletar despesas itemizadas
+  const expenseRows = document.querySelectorAll(".ob-expense-row");
+  const fixedExpenses = [];
+  expenseRows.forEach(row => {
+    const name     = row.querySelector(".ob-expense-name")?.value.trim();
+    const amount   = parseFloat(row.querySelector(".ob-expense-amount")?.value) || 0;
+    const category = row.querySelector(".ob-expense-category")?.value || "outro";
+    if (name && amount > 0) {
+      fixedExpenses.push({ name, amount, category });
+    }
+  });
+
+  // Totais agregados para compatibilidade com o backend legado
+  const fixedTotal    = fixedExpenses.reduce((s, e) => s + e.amount, 0);
+  const goalType      = document.getElementById("obGoalType")?.value || "emergencia";
+  const goalTitleEl   = document.getElementById("obGoalTitle");
+  const goalTitle     = (goalTitleEl?.value.trim()) || goalTypeDefaultTitle(goalType);
+  const goalAmount    = parseFloat(document.getElementById("obGoalAmount")?.value) || null;
+  const goalDate      = document.getElementById("obGoalDate")?.value || null;
+  const goalCurrent   = parseFloat(document.getElementById("obGoalCurrent")?.value) || 0;
 
   return {
-    is_draft: isDraft,
-    name: document.getElementById("obName")?.value.trim() || "",
-    age: parseInt(document.getElementById("obAge")?.value, 10) || null,
-    occupation: document.getElementById("obOccupation")?.value.trim() || "",
-    monthly_income: parseFloat(document.getElementById("obIncome")?.value) || 0.0,
-    extra_income: parseFloat(document.getElementById("obExtraIncome")?.value) || 0.0,
-    fixed_expenses_val: parseFloat(document.getElementById("obFixedExpenses")?.value) || 0.0,
-    variable_expenses_val: parseFloat(document.getElementById("obVariableExpenses")?.value) || 0.0,
-    saved_amount: parseFloat(document.getElementById("obSavedAmount")?.value) || 0.0,
-    saved_destination: document.getElementById("obSavedDestination")?.value || "reserva_emergencia",
-    invests: document.getElementById("obInvests")?.value || "nao_interesse",
-    investment_types: selectedAssets,
-    risk_tolerance: selectedRisk
+    is_draft:              isDraft,
+    data_consent:          dataConsent,
+    // Identificação
+    name:                  document.getElementById("obName")?.value.trim() || "",
+    age:                   parseInt(document.getElementById("obAge")?.value, 10) || null,
+    occupation:            document.getElementById("obOccupation")?.value.trim() || "",
+    // Renda
+    monthly_income:        parseFloat(document.getElementById("obIncome")?.value) || 0.0,
+    extra_income:          parseFloat(document.getElementById("obExtraIncome")?.value) || 0.0,
+    saved_amount:          parseFloat(document.getElementById("obSavedAmount")?.value) || 0.0,
+    // Despesas (valor agregado para compatibilidade + lista detalhada)
+    fixed_expenses_val:    fixedTotal,
+    fixed_expenses_list:   fixedExpenses,
+    variable_expenses_val: 0,          // removido do wizard; será preenchido mês a mês no dashboard
+    // Objetivo
+    goal_type:             goalType,
+    goal_title:            goalTitle,
+    goal_target_amount:    goalAmount,
+    goal_target_date:      goalDate ? goalDate + "-01" : null,
+    goal_current_amount:   goalCurrent,
+    // Perfil de investimento
+    invests:               document.getElementById("obInvests")?.value || "nao_investe",
+    investment_types:      selectedAssets,
+    risk_tolerance:        selectedRisk,
   };
+}
+
+function goalTypeDefaultTitle(type) {
+  const map = {
+    emergencia: "Reserva de Emergência", imovel: "Compra de Imóvel",
+    aposentadoria: "Aposentadoria Antecipada", viagem: "Viagem / Experiência",
+    divida: "Quitação de Dívidas", independencia: "Independência Financeira", outro: "Objetivo Financeiro"
+  };
+  return map[type] || "Objetivo Financeiro";
 }
 
 async function saveOnboardingDraft() {

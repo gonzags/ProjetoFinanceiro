@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -79,6 +79,99 @@ class MonthlyCashFlow(BaseModel):
     total_outflow: float
     net_surplus: float
     status_label: str
+
+
+class FinancialGoal(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    title: str
+    goal_type: str  # emergencia, imovel, aposentadoria, viagem, divida, independencia, outro
+    target_amount: Optional[float] = None
+    target_date: Optional[date] = None
+    current_amount: float = 0.0
+    monthly_contribution: float = 0.0
+    priority: int = 1
+    is_active: bool = True
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+class ExpenseCategory(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    name: str
+    category: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    is_active: bool = True
+    sort_order: int = 0
+
+class ExpenseEntry(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    budget_month_id: int
+    category_id: Optional[int] = None
+    description: str
+    amount: float
+    expense_type: str = 'fixed'  # fixed, variable, debt, card
+    due_date: Optional[date] = None
+    is_paid: bool = False
+    paid_at: Optional[date] = None
+    installment_current: Optional[int] = None
+    installment_total: Optional[int] = None
+    notes: Optional[str] = None
+
+class IncomeEntry(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    budget_month_id: int
+    description: str
+    amount: float
+    income_type: str = 'salary'  # salary, extra, benefit, investment_return, other
+    is_received: bool = False
+    received_at: Optional[date] = None
+    notes: Optional[str] = None
+
+class BudgetMonth(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    year: int
+    month: int
+    label: Optional[str] = None
+    is_closed: bool = False
+    notes: Optional[str] = None
+
+class MonthlySnapshot(BaseModel):
+    year: int
+    month: int
+    label: str
+    total_income: float
+    total_expenses_fixed: float
+    total_expenses_variable: float
+    total_expenses_debt: float
+    total_expenses_card: float
+    total_outflow: float
+    net_surplus: float
+    is_closed: bool
+    status_label: str
+
+class InvestmentPortfolio(BaseModel):
+    id: Optional[int] = None
+    user_id: int
+    consensus_record_id: Optional[int] = None
+    generated_at: Optional[datetime] = None
+    is_active: bool = True
+    pct_renda_fixa: float = 0.0
+    pct_tesouro: float = 0.0
+    pct_fiis: float = 0.0
+    pct_acoes: float = 0.0
+    pct_reserva_liquida: float = 0.0
+    pct_cripto: float = 0.0
+    monthly_investment_target: float = 0.0
+    emergency_reserve_target: float = 0.0
+    months_to_goal: Optional[int] = None
+    projection_json: Optional[Dict[str, Any]] = None
+    rationale: Optional[str] = None
 
 
 # -----------------------------------------------------------------------------
@@ -552,6 +645,147 @@ class DatabaseManager:
             """,
             """
             ALTER TABLE llm_consensus_cache ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+            """,
+            # Bloco 1: expandir users
+            """
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+            """,
+            # Bloco 2: expandir user_financial_profiles com colunas tipadas
+            """
+            ALTER TABLE user_financial_profiles
+                ADD COLUMN IF NOT EXISTS full_name            VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS age                  INTEGER,
+                ADD COLUMN IF NOT EXISTS occupation           VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS city                 VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS monthly_income_net   NUMERIC(12,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS monthly_income_gross NUMERIC(12,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS extra_income         NUMERIC(12,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS benefits_vr          NUMERIC(12,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS saved_amount         NUMERIC(12,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS saved_destination    VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS invests              VARCHAR(30),
+                ADD COLUMN IF NOT EXISTS investment_types     TEXT[],
+                ADD COLUMN IF NOT EXISTS risk_tolerance       VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS data_consent_given   BOOLEAN NOT NULL DEFAULT FALSE,
+                ADD COLUMN IF NOT EXISTS data_consent_at      TIMESTAMPTZ;
+            """,
+            # Bloco 3: objetivos
+            """
+            CREATE TABLE IF NOT EXISTS financial_goals (
+                id                   SERIAL PRIMARY KEY,
+                user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                title                VARCHAR(255) NOT NULL,
+                goal_type            VARCHAR(30) NOT NULL,
+                target_amount        NUMERIC(12,2),
+                target_date          DATE,
+                current_amount       NUMERIC(12,2) NOT NULL DEFAULT 0,
+                monthly_contribution NUMERIC(12,2) NOT NULL DEFAULT 0,
+                priority             INTEGER NOT NULL DEFAULT 1,
+                is_active            BOOLEAN NOT NULL DEFAULT TRUE,
+                notes                TEXT,
+                created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            """,
+            # Bloco 4: categorias de despesa
+            """
+            CREATE TABLE IF NOT EXISTS expense_categories (
+                id          SERIAL PRIMARY KEY,
+                user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name        VARCHAR(100) NOT NULL,
+                category    VARCHAR(50) NOT NULL,
+                icon        VARCHAR(10),
+                color       VARCHAR(7),
+                is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+                sort_order  INTEGER DEFAULT 0,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (user_id, name)
+            );
+            """,
+            # Bloco 5: períodos mensais
+            """
+            CREATE TABLE IF NOT EXISTS budget_months (
+                id          SERIAL PRIMARY KEY,
+                user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                year        INTEGER NOT NULL,
+                month       INTEGER NOT NULL,
+                label       VARCHAR(20),
+                is_closed   BOOLEAN NOT NULL DEFAULT FALSE,
+                notes       TEXT,
+                created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (user_id, year, month)
+            );
+            """,
+            # Bloco 6: despesas
+            """
+            CREATE TABLE IF NOT EXISTS expense_entries (
+                id              SERIAL PRIMARY KEY,
+                user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                budget_month_id INTEGER NOT NULL REFERENCES budget_months(id) ON DELETE CASCADE,
+                category_id     INTEGER REFERENCES expense_categories(id) ON DELETE SET NULL,
+                description     VARCHAR(255) NOT NULL,
+                amount          NUMERIC(12,2) NOT NULL,
+                expense_type    VARCHAR(20) NOT NULL DEFAULT 'fixed',
+                due_date        DATE,
+                is_paid         BOOLEAN NOT NULL DEFAULT FALSE,
+                paid_at         DATE,
+                installment_current INTEGER,
+                installment_total   INTEGER,
+                notes           TEXT,
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            """,
+            # Bloco 7: receitas
+            """
+            CREATE TABLE IF NOT EXISTS income_entries (
+                id              SERIAL PRIMARY KEY,
+                user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                budget_month_id INTEGER NOT NULL REFERENCES budget_months(id) ON DELETE CASCADE,
+                description     VARCHAR(255) NOT NULL,
+                amount          NUMERIC(12,2) NOT NULL,
+                income_type     VARCHAR(20) NOT NULL DEFAULT 'salary',
+                is_received     BOOLEAN NOT NULL DEFAULT FALSE,
+                received_at     DATE,
+                notes           TEXT,
+                created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            """,
+            # Bloco 8: portfólio de investimentos
+            """
+            CREATE TABLE IF NOT EXISTS investment_portfolios (
+                id                        SERIAL PRIMARY KEY,
+                user_id                   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                consensus_record_id       INTEGER REFERENCES llm_consensus_cache(id) ON DELETE SET NULL,
+                generated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                is_active                 BOOLEAN NOT NULL DEFAULT TRUE,
+                pct_renda_fixa            NUMERIC(5,2) NOT NULL DEFAULT 0,
+                pct_tesouro               NUMERIC(5,2) NOT NULL DEFAULT 0,
+                pct_fiis                  NUMERIC(5,2) NOT NULL DEFAULT 0,
+                pct_acoes                 NUMERIC(5,2) NOT NULL DEFAULT 0,
+                pct_reserva_liquida       NUMERIC(5,2) NOT NULL DEFAULT 0,
+                pct_cripto                NUMERIC(5,2) NOT NULL DEFAULT 0,
+                monthly_investment_target NUMERIC(12,2) DEFAULT 0,
+                emergency_reserve_target  NUMERIC(12,2) DEFAULT 0,
+                months_to_goal            INTEGER,
+                projection_json           JSONB,
+                rationale                 TEXT
+            );
+            """,
+            # Bloco 9: respostas individuais de LLM
+            """
+            CREATE TABLE IF NOT EXISTS llm_individual_responses (
+                id              SERIAL PRIMARY KEY,
+                consensus_id    INTEGER NOT NULL REFERENCES llm_consensus_cache(id) ON DELETE CASCADE,
+                user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                provider_name   VARCHAR(50) NOT NULL,
+                round_number    INTEGER NOT NULL DEFAULT 1,
+                raw_response    JSONB NOT NULL,
+                allocation      JSONB,
+                confidence      NUMERIC(4,3),
+                risk_flags      TEXT[],
+                reasoning       TEXT,
+                responded_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
             """
         ]
         
@@ -561,7 +795,7 @@ class DatabaseManager:
                     await conn.execute(q)
                 except Exception as e:
                     logger.warning(f"Erro ao executar DDL ({e}).")
-            logger.info("Tabelas users, user_financial_profiles e llm_consensus_cache verificadas/criadas.")
+            logger.info("Schema completo verificado/criado: 9 tabelas + extensões.")
 
     async def disconnect(self):
         if self.pool:
@@ -655,6 +889,42 @@ class DatabaseManager:
                     ON CONFLICT (user_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW();
                     """
                     await conn.execute(upsert_query, user_id, json.dumps(normalized))
+                    
+                    # Upsert colunas tipadas e consentimento
+                    typedcols_query = """
+                    UPDATE user_financial_profiles SET
+                        full_name          = $2,
+                        age                = $3,
+                        occupation         = $4,
+                        monthly_income_net = $5,
+                        extra_income       = $6,
+                        saved_amount       = $7,
+                        saved_destination  = $8,
+                        invests            = $9,
+                        investment_types   = $10,
+                        risk_tolerance     = $11,
+                        data_consent_given = $12,
+                        data_consent_at    = CASE WHEN $12 THEN NOW() ELSE data_consent_at END,
+                        updated_at         = NOW()
+                    WHERE user_id = $1;
+                    """
+                    onb = payload  # payload original do onboarding
+                    await conn.execute(
+                        typedcols_query,
+                        user_id,
+                        onb.get('name') or onb.get('user_name'),
+                        int(onb.get('age')) if onb.get('age') else None,
+                        onb.get('occupation'),
+                        float(onb.get('monthly_income') or 0),
+                        float(onb.get('extra_income') or 0),
+                        float(onb.get('saved_amount') or 0),
+                        onb.get('saved_destination'),
+                        onb.get('invests'),
+                        onb.get('investment_types') or [],
+                        onb.get('risk_tolerance') or 'moderado',
+                        bool(onb.get('data_consent', False))
+                    )
+                    
                     if not is_draft:
                         await conn.execute("UPDATE users SET onboarding_completed = TRUE WHERE id = $1;", user_id)
                         await conn.execute("UPDATE llm_consensus_cache SET is_active = FALSE WHERE user_id = $1;", user_id)
@@ -805,6 +1075,442 @@ class DatabaseManager:
                         await conn.execute("UPDATE llm_consensus_cache SET is_active = FALSE WHERE is_active = TRUE AND user_id IS NULL;")
             except Exception as e:
                 logger.error(f"Erro ao invalidar cache no PostgreSQL: {e}")
+
+    async def update_last_login(self, user_id: int):
+        """Atualiza last_login_at do usuário após autenticação bem-sucedida."""
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE users SET last_login_at = NOW() WHERE id = $1;",
+                    user_id
+                )
+
+    # -------------------------------------------------------------------------
+    # Budget Months
+    # -------------------------------------------------------------------------
+    async def get_or_create_budget_month(self, user_id: int, year: int, month: int) -> Dict[str, Any]:
+        """Retorna ou cria o período mensal. Auto-fecha meses passados."""
+        import calendar
+        label = f"{calendar.month_name[month]}/{year}"
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                # Auto-fechar meses anteriores ao atual
+                now = datetime.now(timezone.utc)
+                await conn.execute("""
+                    UPDATE budget_months SET is_closed = TRUE
+                    WHERE user_id = $1
+                      AND is_closed = FALSE
+                      AND (year < $2 OR (year = $2 AND month < $3))
+                """, user_id, now.year, now.month)
+                # Upsert do mês solicitado
+                row = await conn.fetchrow("""
+                    INSERT INTO budget_months (user_id, year, month, label)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (user_id, year, month) DO UPDATE SET label = EXCLUDED.label
+                    RETURNING id, user_id, year, month, label, is_closed, notes, created_at
+                """, user_id, year, month, label)
+                return dict(row)
+        # Demo fallback
+        return {"id": 1, "user_id": user_id, "year": year, "month": month,
+                "label": label, "is_closed": False, "notes": None}
+
+    async def get_monthly_summary(self, user_id: int, year: int, month: int) -> Dict[str, Any]:
+        """Calcula o resumo financeiro do mês a partir dos lançamentos reais."""
+        bm = await self.get_or_create_budget_month(user_id, year, month)
+        if not self.is_connected or not self.pool:
+            return self.demo_manager.get_financial_summary("Atual", user_id=user_id)
+        async with self.pool.acquire() as conn:
+            income_row = await conn.fetchrow("""
+                SELECT COALESCE(SUM(amount),0) AS total FROM income_entries
+                WHERE budget_month_id = $1 AND user_id = $2
+            """, bm["id"], user_id)
+            exp_rows = await conn.fetch("""
+                SELECT expense_type, COALESCE(SUM(amount),0) AS total
+                FROM expense_entries
+                WHERE budget_month_id = $1 AND user_id = $2
+                GROUP BY expense_type
+            """, bm["id"], user_id)
+        totals = {r["expense_type"]: float(r["total"]) for r in exp_rows}
+        total_income = float(income_row["total"])
+        fixed = totals.get("fixed", 0)
+        variable = totals.get("variable", 0)
+        debt = totals.get("debt", 0)
+        card = totals.get("card", 0)
+        total_out = fixed + variable + debt + card
+        import calendar
+        return {
+            "year": year, "month": month,
+            "label": bm["label"] or f"{calendar.month_name[month]}/{year}",
+            "total_income": round(total_income, 2),
+            "total_expenses_fixed": round(fixed, 2),
+            "total_expenses_variable": round(variable, 2),
+            "total_expenses_debt": round(debt, 2),
+            "total_expenses_card": round(card, 2),
+            "total_outflow": round(total_out, 2),
+            "net_surplus": round(total_income - total_out, 2),
+            "is_closed": bm["is_closed"],
+        }
+
+    async def close_budget_month(self, user_id: int, year: int, month: int) -> bool:
+        """Fecha um período mensal tornando-o somente-leitura."""
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                await conn.execute("""
+                    UPDATE budget_months SET is_closed = TRUE
+                    WHERE user_id = $1 AND year = $2 AND month = $3
+                """, user_id, year, month)
+        return True
+
+    async def _check_month_editable(self, budget_month_id: int, user_id: int):
+        """Lança ValueError se o mês estiver fechado. Chame antes de qualquer write."""
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT is_closed FROM budget_months WHERE id = $1 AND user_id = $2",
+                    budget_month_id, user_id
+                )
+                if row and row["is_closed"]:
+                    raise ValueError("Mês encerrado — não é possível editar lançamentos de períodos fechados.")
+
+    # -------------------------------------------------------------------------
+    # Expense Categories
+    # -------------------------------------------------------------------------
+    async def get_expense_categories(self, user_id: int) -> List[Dict[str, Any]]:
+        if not self.is_connected or not self.pool:
+            return []
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, user_id, name, category, icon, color, is_active, sort_order
+                FROM expense_categories
+                WHERE user_id = $1 AND is_active = TRUE
+                ORDER BY sort_order, name
+            """, user_id)
+        return [dict(r) for r in rows]
+
+    async def create_expense_category(self, user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.is_connected or not self.pool:
+            return {"id": 0, **data}
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                INSERT INTO expense_categories (user_id, name, category, icon, color, sort_order)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (user_id, name) DO UPDATE
+                    SET category=$3, icon=$4, color=$5, sort_order=$6, is_active=TRUE
+                RETURNING id, user_id, name, category, icon, color, is_active, sort_order
+            """, user_id, data["name"], data["category"],
+                data.get("icon"), data.get("color"), data.get("sort_order", 0))
+        return dict(row)
+
+    async def update_expense_category(self, user_id: int, cat_id: int, data: Dict[str, Any]) -> bool:
+        if not self.is_connected or not self.pool:
+            return False
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE expense_categories
+                SET name=$3, category=$4, icon=$5, color=$6, sort_order=$7
+                WHERE id=$1 AND user_id=$2
+            """, cat_id, user_id, data["name"], data["category"],
+                data.get("icon"), data.get("color"), data.get("sort_order", 0))
+        return True
+
+    async def delete_expense_category(self, user_id: int, cat_id: int) -> bool:
+        """Soft-delete: marca is_active=FALSE."""
+        if not self.is_connected or not self.pool:
+            return False
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE expense_categories SET is_active=FALSE WHERE id=$1 AND user_id=$2",
+                cat_id, user_id
+            )
+        return True
+
+    # -------------------------------------------------------------------------
+    # Expense Entries
+    # -------------------------------------------------------------------------
+    async def get_expense_entries(self, user_id: int, budget_month_id: int) -> List[Dict[str, Any]]:
+        if not self.is_connected or not self.pool:
+            return []
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT e.id, e.user_id, e.budget_month_id, e.category_id,
+                       e.description, e.amount, e.expense_type, e.due_date,
+                       e.is_paid, e.paid_at, e.installment_current, e.installment_total,
+                       e.notes, e.created_at, c.name AS category_name, c.icon AS category_icon
+                FROM expense_entries e
+                LEFT JOIN expense_categories c ON c.id = e.category_id
+                WHERE e.budget_month_id = $1 AND e.user_id = $2
+                ORDER BY e.expense_type, e.description
+            """, budget_month_id, user_id)
+        return [dict(r) for r in rows]
+
+    async def upsert_expense_entry(self, user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        bm_id = data["budget_month_id"]
+        await self._check_month_editable(bm_id, user_id)
+        if not self.is_connected or not self.pool:
+            return {"id": 0, **data}
+        entry_id = data.get("id")
+        async with self.pool.acquire() as conn:
+            if entry_id:
+                row = await conn.fetchrow("""
+                    UPDATE expense_entries SET
+                        description=$3, amount=$4, expense_type=$5, category_id=$6,
+                        due_date=$7, is_paid=$8, paid_at=$9,
+                        installment_current=$10, installment_total=$11, notes=$12
+                    WHERE id=$1 AND user_id=$2
+                    RETURNING *
+                """, entry_id, user_id,
+                    data["description"], float(data["amount"]), data.get("expense_type", "fixed"),
+                    data.get("category_id"), data.get("due_date"), data.get("is_paid", False),
+                    data.get("paid_at"), data.get("installment_current"), data.get("installment_total"),
+                    data.get("notes"))
+            else:
+                row = await conn.fetchrow("""
+                    INSERT INTO expense_entries
+                        (user_id, budget_month_id, description, amount, expense_type,
+                         category_id, due_date, is_paid, installment_current, installment_total, notes)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                    RETURNING *
+                """, user_id, bm_id,
+                    data["description"], float(data["amount"]), data.get("expense_type", "fixed"),
+                    data.get("category_id"), data.get("due_date"), data.get("is_paid", False),
+                    data.get("installment_current"), data.get("installment_total"), data.get("notes"))
+        return dict(row)
+
+    async def delete_expense_entry(self, user_id: int, entry_id: int) -> bool:
+        # Precisamos checar o mes antes de deletar
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT budget_month_id FROM expense_entries WHERE id=$1 AND user_id=$2",
+                    entry_id, user_id
+                )
+                if row:
+                    await self._check_month_editable(row["budget_month_id"], user_id)
+                await conn.execute(
+                    "DELETE FROM expense_entries WHERE id=$1 AND user_id=$2",
+                    entry_id, user_id
+                )
+        return True
+
+    # -------------------------------------------------------------------------
+    # Income Entries
+    # -------------------------------------------------------------------------
+    async def get_income_entries(self, user_id: int, budget_month_id: int) -> List[Dict[str, Any]]:
+        if not self.is_connected or not self.pool:
+            return []
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, user_id, budget_month_id, description, amount,
+                       income_type, is_received, received_at, notes, created_at
+                FROM income_entries
+                WHERE budget_month_id=$1 AND user_id=$2
+                ORDER BY income_type, description
+            """, budget_month_id, user_id)
+        return [dict(r) for r in rows]
+
+    async def upsert_income_entry(self, user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        bm_id = data["budget_month_id"]
+        await self._check_month_editable(bm_id, user_id)
+        if not self.is_connected or not self.pool:
+            return {"id": 0, **data}
+        entry_id = data.get("id")
+        async with self.pool.acquire() as conn:
+            if entry_id:
+                row = await conn.fetchrow("""
+                    UPDATE income_entries SET
+                        description=$3, amount=$4, income_type=$5, is_received=$6, received_at=$7, notes=$8
+                    WHERE id=$1 AND user_id=$2
+                    RETURNING *
+                """, entry_id, user_id,
+                    data["description"], float(data["amount"]), data.get("income_type", "salary"),
+                    data.get("is_received", False), data.get("received_at"), data.get("notes"))
+            else:
+                row = await conn.fetchrow("""
+                    INSERT INTO income_entries (user_id, budget_month_id, description, amount, income_type, is_received, received_at, notes)
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+                    RETURNING *
+                """, user_id, bm_id,
+                    data["description"], float(data["amount"]), data.get("income_type", "salary"),
+                    data.get("is_received", False), data.get("received_at"), data.get("notes"))
+        return dict(row)
+
+    async def delete_income_entry(self, user_id: int, entry_id: int) -> bool:
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT budget_month_id FROM income_entries WHERE id=$1 AND user_id=$2",
+                    entry_id, user_id
+                )
+                if row:
+                    await self._check_month_editable(row["budget_month_id"], user_id)
+                await conn.execute("DELETE FROM income_entries WHERE id=$1 AND user_id=$2", entry_id, user_id)
+        return True
+
+    # -------------------------------------------------------------------------
+    # Financial Goals
+    # -------------------------------------------------------------------------
+    async def get_active_goal(self, user_id: int) -> Optional[Dict[str, Any]]:
+        if not self.is_connected or not self.pool:
+            return None
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT id, user_id, title, goal_type, target_amount, target_date,
+                       current_amount, monthly_contribution, priority, is_active, notes,
+                       created_at, updated_at
+                FROM financial_goals
+                WHERE user_id=$1 AND is_active=TRUE AND priority=1
+                LIMIT 1
+            """, user_id)
+        return dict(row) if row else None
+
+    async def upsert_goal(self, user_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        if not self.is_connected or not self.pool:
+            return {"id": 0, **data}
+        goal_id = data.get("id")
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                if data.get("priority", 1) == 1:
+                    # Rebaixar prioridade do objetivo anterior
+                    await conn.execute("""
+                        UPDATE financial_goals SET priority=2 WHERE user_id=$1 AND priority=1 AND is_active=TRUE
+                    """, user_id)
+                if goal_id:
+                    row = await conn.fetchrow("""
+                        UPDATE financial_goals SET
+                            title=$3, goal_type=$4, target_amount=$5, target_date=$6,
+                            current_amount=$7, monthly_contribution=$8, priority=$9,
+                            is_active=$10, notes=$11, updated_at=NOW()
+                        WHERE id=$1 AND user_id=$2
+                        RETURNING *
+                    """, goal_id, user_id,
+                        data["title"], data["goal_type"], data.get("target_amount"),
+                        data.get("target_date"), float(data.get("current_amount", 0)),
+                        float(data.get("monthly_contribution", 0)), data.get("priority", 1),
+                        data.get("is_active", True), data.get("notes"))
+                else:
+                    row = await conn.fetchrow("""
+                        INSERT INTO financial_goals (user_id, title, goal_type, target_amount, target_date,
+                            current_amount, monthly_contribution, priority, notes)
+                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                        RETURNING *
+                    """, user_id, data["title"], data["goal_type"], data.get("target_amount"),
+                        data.get("target_date"), float(data.get("current_amount", 0)),
+                        float(data.get("monthly_contribution", 0)), data.get("priority", 1),
+                        data.get("notes"))
+        return dict(row)
+
+    async def deactivate_goal(self, user_id: int, goal_id: int) -> bool:
+        if self.is_connected and self.pool:
+            async with self.pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE financial_goals SET is_active=FALSE, updated_at=NOW() WHERE id=$1 AND user_id=$2",
+                    goal_id, user_id
+                )
+        return True
+
+    # -------------------------------------------------------------------------
+    # Investment Portfolios (histórico acumulado)
+    # -------------------------------------------------------------------------
+    async def get_active_portfolio(self, user_id: int) -> Optional[Dict[str, Any]]:
+        if not self.is_connected or not self.pool:
+            return None
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT id, user_id, consensus_record_id, generated_at, is_active,
+                       pct_renda_fixa, pct_tesouro, pct_fiis, pct_acoes,
+                       pct_reserva_liquida, pct_cripto, monthly_investment_target,
+                       emergency_reserve_target, months_to_goal, projection_json, rationale
+                FROM investment_portfolios
+                WHERE user_id=$1 AND is_active=TRUE
+                ORDER BY generated_at DESC LIMIT 1
+            """, user_id)
+        return dict(row) if row else None
+
+    async def get_portfolio_history(self, user_id: int, limit: int = 5) -> List[Dict[str, Any]]:
+        """Retorna os últimos N portfólios para usar como contexto no próximo prompt."""
+        if not self.is_connected or not self.pool:
+            return []
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, generated_at, is_active, pct_renda_fixa, pct_tesouro, pct_fiis,
+                       pct_acoes, pct_reserva_liquida, pct_cripto, monthly_investment_target,
+                       months_to_goal, rationale
+                FROM investment_portfolios
+                WHERE user_id=$1
+                ORDER BY generated_at DESC LIMIT $2
+            """, user_id, limit)
+        return [dict(r) for r in rows]
+
+    async def save_portfolio(self, user_id: int, data: Dict[str, Any], consensus_record_id: Optional[int] = None) -> Dict[str, Any]:
+        """Salva novo portfólio. O anterior permanece no histórico (is_active=FALSE)."""
+        if not self.is_connected or not self.pool:
+            return {"id": 0, **data}
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute(
+                    "UPDATE investment_portfolios SET is_active=FALSE WHERE user_id=$1 AND is_active=TRUE",
+                    user_id
+                )
+                row = await conn.fetchrow("""
+                    INSERT INTO investment_portfolios (
+                        user_id, consensus_record_id, pct_renda_fixa, pct_tesouro,
+                        pct_fiis, pct_acoes, pct_reserva_liquida, pct_cripto,
+                        monthly_investment_target, emergency_reserve_target,
+                        months_to_goal, projection_json, rationale
+                    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                    RETURNING *
+                """, user_id, consensus_record_id,
+                    float(data.get("pct_renda_fixa", 0)), float(data.get("pct_tesouro", 0)),
+                    float(data.get("pct_fiis", 0)), float(data.get("pct_acoes", 0)),
+                    float(data.get("pct_reserva_liquida", 0)), float(data.get("pct_cripto", 0)),
+                    float(data.get("monthly_investment_target", 0)),
+                    float(data.get("emergency_reserve_target", 0)),
+                    data.get("months_to_goal"),
+                    json.dumps(data.get("projection_json")) if data.get("projection_json") else None,
+                    data.get("rationale")
+                )
+        return dict(row)
+
+    # -------------------------------------------------------------------------
+    # LLM Individual Responses
+    # -------------------------------------------------------------------------
+    async def save_llm_individual_response(self, data: Dict[str, Any]) -> bool:
+        if not self.is_connected or not self.pool:
+            return False
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+                INSERT INTO llm_individual_responses
+                    (consensus_id, user_id, provider_name, round_number,
+                     raw_response, allocation, confidence, risk_flags, reasoning)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            """, data["consensus_id"], data["user_id"], data["provider_name"],
+                data.get("round_number", 1),
+                json.dumps(data.get("raw_response", {})),
+                json.dumps(data.get("allocation")) if data.get("allocation") else None,
+                data.get("confidence"),
+                data.get("risk_flags") or [],
+                data.get("reasoning")
+            )
+        return True
+
+    # -------------------------------------------------------------------------
+    # Timeline e Forecast (dados reais)
+    # -------------------------------------------------------------------------
+    async def get_monthly_timeline(self, user_id: int, months_back: int = 3, months_forward: int = 9) -> List[Dict[str, Any]]:
+        """Retroativo + projeção futura personalizada."""
+        now = datetime.now(timezone.utc)
+        results = []
+        for delta in range(-months_back, months_forward + 1):
+            # calcular year/month com delta
+            total_month = now.month + delta
+            year = now.year + (total_month - 1) // 12
+            month = ((total_month - 1) % 12) + 1
+            try:
+                snap = await self.get_monthly_summary(user_id, year, month)
+                results.append(snap)
+            except Exception as e:
+                logger.warning(f"Erro ao carregar mês {year}/{month}: {e}")
+        return results
 
     async def update_financial_inputs(self, new_data: Dict[str, Any], user_id: Optional[int] = None):
         self.demo_manager.update_financial_inputs(new_data, user_id=user_id)
