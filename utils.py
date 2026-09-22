@@ -2259,20 +2259,57 @@ class DatabaseManager:
     # Timeline e Forecast (dados reais)
     # -------------------------------------------------------------------------
     async def get_monthly_timeline(self, user_id: int, months_back: int = 3, months_forward: int = 9) -> List[Dict[str, Any]]:
-        """Retroativo + projeção futura personalizada."""
+        """Retroativo + projeção futura personalizada.
+
+        Para meses sem lançamentos reais usa o perfil de onboarding como baseline de projeção.
+        """
+        import calendar as _cal
         now = datetime.now(timezone.utc)
+
+        # Carregar baseline do perfil de onboarding (renda + despesas fixas)
+        baseline_income = 0.0
+        baseline_fixed = 0.0
+        try:
+            profile_raw = await self.get_onboarding_profile(user_id)
+            profile = profile_raw or {}
+            if isinstance(profile, dict) and "onboarding_answers" in profile:
+                profile = profile["onboarding_answers"]
+            # Renda: somar todos os itens da income_list ou usar monthly_income
+            income_list = profile.get("income_list") or []
+            if income_list:
+                baseline_income = sum(float(src.get("amount", 0)) for src in income_list)
+            else:
+                baseline_income = float(profile.get("monthly_income") or 0)
+            # Despesas fixas: somar todos os itens da fixed_expenses_list
+            exp_list = profile.get("fixed_expenses_list") or []
+            if exp_list:
+                baseline_fixed = sum(float(e.get("amount", 0)) for e in exp_list)
+            else:
+                baseline_fixed = float(profile.get("fixed_expenses_val") or
+                                       profile.get("fixed_expenses") or 0)
+        except Exception as e:
+            logger.warning(f"get_monthly_timeline: erro ao carregar baseline do perfil: {e}")
+
         results = []
         for delta in range(-months_back, months_forward + 1):
-            # calcular year/month com delta
             total_month = now.month + delta
             year = now.year + (total_month - 1) // 12
             month = ((total_month - 1) % 12) + 1
             try:
                 snap = await self.get_monthly_summary(user_id, year, month)
+                # Se o mês não tem dados reais, projetar com baseline do perfil
+                has_real_data = snap.get("total_income", 0) > 0 or snap.get("total_outflow", 0) > 0
+                if not has_real_data and baseline_income > 0:
+                    snap["total_income"] = round(baseline_income, 2)
+                    snap["total_expenses_fixed"] = round(baseline_fixed, 2)
+                    snap["net_surplus"] = round(baseline_income - baseline_fixed, 2)
+                    snap["total_outflow"] = round(baseline_fixed, 2)
+                    snap["is_projected"] = True
                 results.append(snap)
             except Exception as e:
                 logger.warning(f"Erro ao carregar mês {year}/{month}: {e}")
         return results
+
 
     async def update_financial_inputs(self, new_data: Dict[str, Any], user_id: Optional[int] = None):
         self.demo_manager.update_financial_inputs(new_data, user_id=user_id)

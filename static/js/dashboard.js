@@ -1319,24 +1319,82 @@ function initTimelineChartReal(data) {
   const fixed    = data.map(d => d.total_expenses_fixed || 0);
   const variable = data.map(d => d.total_expenses_variable || 0);
   const debts    = data.map(d => (d.total_expenses_debt || 0) + (d.total_expenses_card || 0));
-  const surplus  = data.map(d => d.net_surplus || 0);
+  const surplus  = data.map(d => Math.max(0, d.net_surplus || 0));
+  const isProjected = data.map(d => !!d.is_projected);
 
   const options = {
-    chart: { type: 'bar', height: 330, stacked: true, toolbar: { show: false }, fontFamily: 'Plus Jakarta Sans, sans-serif' },
+    chart: {
+      type: 'bar', height: 330, stacked: true,
+      toolbar: { show: false },
+      fontFamily: 'Plus Jakarta Sans, Inter, sans-serif',
+    },
     colors: [colors.cobalt, '#7C5CBF', colors.amber, colors.green],
     series: [
-      { name: 'Fixos',    data: fixed },
-      { name: 'Variáveis',data: variable },
-      { name: 'Dívidas',  data: debts },
-      { name: 'Sobra',    data: surplus },
+      { name: 'Fixos',     data: fixed,    type: 'bar' },
+      { name: 'Variáveis', data: variable, type: 'bar' },
+      { name: 'Dívidas',   data: debts,    type: 'bar' },
+      { name: 'Sobra',     data: surplus,  type: 'bar' },
     ],
-    xaxis: { categories },
-    yaxis: { labels: { formatter: v => formatCurrency(v).replace('R$\u00a0','') } },
-    legend: { position: 'top' },
-    tooltip: { y: { formatter: v => formatCurrency(v) } },
-    plotOptions: { bar: { borderRadius: 4 } },
+    xaxis: {
+      categories,
+      labels: { style: { fontSize: '11px' } }
+    },
+    yaxis: {
+      labels: { formatter: v => 'R$\u00a0' + v.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) }
+    },
+    legend: { position: 'top', fontSize: '12px' },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      y: { formatter: v => formatCurrency(v) },
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const d = data[dataPointIndex];
+        const inc = d.total_income || 0;
+        const fix = d.total_expenses_fixed || 0;
+        const vari = d.total_expenses_variable || 0;
+        const dbt = (d.total_expenses_debt || 0) + (d.total_expenses_card || 0);
+        const sob = d.net_surplus || 0;
+        const proj = d.is_projected ? '<div style="color:#f59e0b;font-size:10px;margin-bottom:4px;">📊 Projeção (sem lançamentos reais)</div>' : '';
+        const row = (label, val, color) =>
+          `<div style="display:flex;justify-content:space-between;gap:16px;padding:2px 0;">
+            <span style="color:${color||'inherit'}">${label}</span>
+            <strong>${formatCurrency(val)}</strong>
+          </div>`;
+        return `<div style="padding:10px 14px;font-size:12px;min-width:200px;">
+          ${proj}
+          <div style="font-weight:700;margin-bottom:6px;">${d.label || ''}</div>
+          ${row('Receita', inc, '#2EA884')}
+          <hr style="border:none;border-top:1px solid rgba(100,116,139,.2);margin:4px 0;">
+          ${row('Fixos', fix, colors.cobalt)}
+          ${vari > 0 ? row('Variáveis', vari, '#7C5CBF') : ''}
+          ${dbt > 0 ? row('Dívidas/Cartão', dbt, colors.amber) : ''}
+          <hr style="border:none;border-top:1px solid rgba(100,116,139,.2);margin:4px 0;">
+          ${row(sob >= 0 ? 'Sobra' : 'Deficit', sob, sob >= 0 ? '#2EA884' : '#ef4444')}
+        </div>`;
+      }
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 3,
+        columnWidth: '65%',
+      }
+    },
     dataLabels: { enabled: false },
-    grid: { borderColor: colors.border },
+    grid: { borderColor: colors.border, strokeDashArray: 3 },
+    // Destaque visual de meses com dados reais vs projetados
+    annotations: {
+      xaxis: data
+        .map((d, i) => d.is_projected ? null : {
+          x: categories[i],
+          borderColor: 'rgba(30,86,160,0.4)',
+          borderWidth: 2,
+          label: { text: '', style: { background: 'transparent' } }
+        })
+        .filter(Boolean)
+    },
+    fill: {
+      opacity: data.map(d => d.is_projected ? 0.45 : 1),
+    },
   };
 
   const el = document.getElementById('chartCashFlowTimeline');
@@ -1345,6 +1403,7 @@ function initTimelineChartReal(data) {
   timelineChart = new ApexCharts(el, options);
   timelineChart.render();
 }
+
 
 // =============================================================================
 // Inicialização no Carregamento do DOM
