@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ledger_horizon_app
+    restart: unless-stopped
+    ports:
+      - "8300:8000"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres_db       # hostname do banco (ex: postgres_db, localhost)
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=your_database_name
+      - POSTGRES_USER=your_db_user
+      - POSTGRES_PASSWORD=your_secure_password
+    volumes:
+      - ./static/uploads:/app/static/uploads
+    networks:
+      - server_default
+
+networks:
+  server_default:
+    external: true
+
+# ---------------------------------------------------------------------------
+# COMO USAR:
+#   1. Copie este arquivo:  cp docker-compose.yml.example docker-compose.yml
+#   2. Edite docker-compose.yml com seus valores reais
+#   3. docker-compose.yml está no .gitignore — nunca vai para o repositório
+# ---------------------------------------------------------------------------
