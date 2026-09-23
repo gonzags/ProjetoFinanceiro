@@ -181,15 +181,15 @@
           </div>
 
           <div class="lh-kpi-card" style="--card-accent: var(--lh-cobalt);">
-            <div class="lh-kpi-label">Custos Fixos</div>
+            <div class="lh-kpi-label">Despesas Totais</div>
             <div class="lh-kpi-value tabular-nums" id="kpiFixed">
-              R$ {{ "%.2f"|format(summary.total_expenses_fixed) if summary and summary.total_expenses_fixed is defined else "0,00" }}
+              R$ {{ "%.2f"|format((summary.total_outflow or 0)) if summary else "0,00" }}
             </div>
-            <div class="lh-kpi-subtitle" id="kpiFixedSub">Editáveis abaixo ↓</div>
+            <div class="lh-kpi-subtitle" id="kpiFixedSub">Fixos + Variáveis + Dívidas</div>
           </div>
 
           <div class="lh-kpi-card" style="--card-accent: var(--lh-amber-ui);">
-            <div class="lh-kpi-label">Compromissos & Dívidas</div>
+            <div class="lh-kpi-label">Compromissos &amp; Dívidas</div>
             <div class="lh-kpi-value tabular-nums" id="kpiDebts">
               R$ {{ "%.2f"|format((summary.total_expenses_debt or 0) + (summary.total_expenses_card or 0)) if summary else "0,00" }}
             </div>
@@ -207,6 +207,16 @@
           </div>
         </section>
       </section>
+
+      <!-- ================================================================ -->
+      <!-- Painel de Insights do Mês                                        -->
+      <!-- ================================================================ -->
+      <div id="insightsPanel" style="margin-bottom:20px; display:none;">
+        <div class="lh-card" style="padding:14px 18px;">
+          <div style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--lh-text-muted); margin-bottom:10px;">💡 Insights do Mês</div>
+          <div id="insightsList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+        </div>
+      </div>
 
       <!-- ================================================================ -->
       <!-- Grade Principal: Despesas | Receitas | Objetivo | Portfólio IA -->

@@ -1489,6 +1489,18 @@ async def create_card(request: Request, body: CreditCardInput):
     card = await db_manager.upsert_credit_card(user['id'], body.model_dump())
     return JSONResponse(card, status_code=201)
 
+@app.post("/api/profile/cards/reseed")
+async def reseed_cards(request: Request):
+    """Re-importa cartões salvos no onboarding para a tabela credit_cards."""
+    user = getattr(request.state, 'user', None)
+    if not user:
+        user = await get_current_user(request)
+    if not user:
+        return JSONResponse({'error': 'unauthorized'}, status_code=401)
+    count = await db_manager.reseed_cards_from_profile(user['id'])
+    return JSONResponse({'reseeded': count, 'message': f'{count} cartão(ões) importado(s) do seu cadastro.'})
+
+
 @app.patch("/api/profile/cards/{card_id}")
 async def patch_card_balance(request: Request, card_id: str, body: CardBalancePatchInput):
     user = getattr(request.state, 'user', None)

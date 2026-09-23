@@ -440,23 +440,28 @@ async function loadCardBadges() {
     const res = await fetch('/api/profile/cards');
     if (!res.ok) return;
     const cards = await res.json();
-    window._userCards = cards; // cache global para uso em loadKPIs
-    
+    window._userCards = cards;
+
     const bar = document.getElementById('cardBadgesBar');
     if (!bar) return;
-    
+
     if (!cards || cards.length === 0) {
-      bar.innerHTML = '<span style="font-size:0.78rem; color:var(--lh-text-muted);">Nenhum cartão cadastrado ainda.</span>';
+      bar.innerHTML = `
+        <span style="font-size:0.78rem; color:var(--lh-text-muted);">Nenhum cartão cadastrado.</span>
+        <button onclick="reseedCards()" style="font-size:0.75rem; padding:3px 10px; border-radius:4px;
+          background:rgba(30,86,160,.15); border:1px solid rgba(30,86,160,.3);
+          color:var(--lh-primary); cursor:pointer;">
+          🔄 Importar do cadastro
+        </button>`;
       return;
     }
-    
+
     bar.innerHTML = cards.map(c => `
       <span style="
         display:inline-flex; align-items:center; gap:5px;
         padding:5px 10px; background:var(--lh-surface-2, rgba(100,116,139,0.08));
         border:1px solid var(--lh-border); border-radius:20px;
-        font-size:0.78rem; color:var(--lh-text);
-      ">
+        font-size:0.78rem; color:var(--lh-text);">
         💳 <strong>${c.name}</strong>: fecha dia ${c.closing_day}, vence dia ${c.due_day}
         ${c.current_balance > 0 ? `<span style="color:#ef4444;margin-left:4px;">R$ ${c.current_balance.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>` : ''}
       </span>
@@ -464,6 +469,94 @@ async function loadCardBadges() {
   } catch (e) {
     console.error('Erro ao carregar cartões:', e);
   }
+}
+
+async function reseedCards() {
+  try {
+    const res = await fetch('/api/profile/cards/reseed', { method: 'POST' });
+    const data = await res.json();
+    if (data.reseeded > 0) {
+      await loadCardBadges();
+    } else {
+      alert('Nenhum cartão encontrado no seu cadastro. Acesse Editar Perfil para adicionar cartões.');
+    }
+  } catch(e) { console.error('Erro ao importar cartões:', e); }
+}
+
+// =============================================================================
+// Insights Automáticos do Mês
+// =============================================================================
+function renderInsights(s) {
+  const panel = document.getElementById('insightsPanel');
+  const list  = document.getElementById('insightsList');
+  if (!panel || !list) return;
+
+  const income  = s.total_income || 0;
+  const fixed   = s.total_expenses_fixed || 0;
+  const varExp  = s.total_expenses_variable || 0;
+  const debts   = (s.total_expenses_debt || 0) + (s.total_expenses_card || 0);
+  const surplus = s.net_surplus || 0;
+  const totalOut = fixed + varExp + debts;
+
+  const insights = [];
+
+  const chip = (icon, text, color) =>
+    `<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+      border-radius:20px;font-size:0.8rem;background:${color}15;border:1px solid ${color}40;color:var(--lh-text);">
+      <span>${icon}</span><span>${text}</span>
+    </div>`;
+
+  // Sem renda registrada
+  if (income === 0) {
+    insights.push(chip('⚠️', 'Nenhuma receita lançada — registre sua renda para ativar todos os indicadores', '#f59e0b'));
+  }
+
+  // Despesas variáveis altas (>30% da renda)
+  if (income > 0 && varExp > 0) {
+    const varPct = Math.round((varExp / income) * 100);
+    if (varPct > 30) {
+      insights.push(chip('🔴', `Variáveis em ${varPct}% da renda (${formatCurrency(varExp)}) — acima do ideal de 30%`, '#ef4444'));
+    } else if (varPct > 15) {
+      insights.push(chip('🟡', `Variáveis em ${varPct}% da renda (${formatCurrency(varExp)}) — monitorar`, '#f59e0b'));
+    } else if (varPct > 0) {
+      insights.push(chip('🟢', `Variáveis controladas: ${varPct}% da renda (${formatCurrency(varExp)})`, '#22c55e'));
+    }
+  }
+
+  // Sobra < 10% — risco
+  if (income > 0 && surplus >= 0 && surplus < income * 0.1) {
+    insights.push(chip('⚠️', `Sobra de apenas ${Math.round((surplus/income)*100)}% da renda — pouco espaço para imprevistos`, '#f59e0b'));
+  }
+
+  // Despesas fixas > 70% da renda
+  if (income > 0 && fixed > income * 0.7) {
+    const pct = Math.round((fixed / income) * 100);
+    insights.push(chip('🔴', `Custos fixos em ${pct}% da renda — compromete liberdade financeira`, '#ef4444'));
+  }
+
+  // Dívidas > 30% da renda
+  if (income > 0 && debts > income * 0.3) {
+    const pct = Math.round((debts / income) * 100);
+    insights.push(chip('🔴', `Dívidas/cartões em ${pct}% da renda (${formatCurrency(debts)}) — avaliar renegociação`, '#ef4444'));
+  }
+
+  // Déficit
+  if (surplus < 0) {
+    insights.push(chip('🚨', `Deficit de ${formatCurrency(Math.abs(surplus))} este mês — despesas superam receitas`, '#ef4444'));
+  }
+
+  // Tudo bem
+  if (income > 0 && surplus > income * 0.2 && varExp <= income * 0.3 && fixed <= income * 0.6) {
+    insights.push(chip('✅', `Mês equilibrado: sobra ${Math.round((surplus/income)*100)}% da renda`, '#22c55e'));
+  }
+
+  if (insights.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = insights.join('');
+  panel.style.display = 'block';
 }
 
 function renderConsensus(data) {
@@ -781,10 +874,12 @@ async function loadBudgetMonth() {
     const badge = document.getElementById('closedBadge');
     if (badge) badge.style.display = _monthClosed ? 'inline-flex' : 'none';
 
-    // KPIs
+    // KPIs — usa total_outflow (fixos + variáveis + dívidas + cartão)
     const s = data.summary;
+    const totalOut = (s.total_expenses_fixed||0) + (s.total_expenses_variable||0) +
+                     (s.total_expenses_debt||0) + (s.total_expenses_card||0);
     setText('kpiIncome',  formatCurrency(s.total_income));
-    setText('kpiFixed',   formatCurrency(s.total_expenses_fixed));
+    setText('kpiFixed',   formatCurrency(totalOut));
     setText('kpiDebts',   formatCurrency((s.total_expenses_debt||0) + (s.total_expenses_card||0)));
     const surplus = s.net_surplus;
     const surplusEl = document.getElementById('kpiSurplus');
@@ -793,15 +888,38 @@ async function loadBudgetMonth() {
       surplusEl.className = 'lh-kpi-value tabular-nums ' + (surplus >= 0 ? 'text-green' : 'text-red');
     }
 
+    // Subtítulo de despesas com breakdown
+    const fixedSub = document.getElementById('kpiFixedSub');
+    if (fixedSub) {
+      const parts = [];
+      if (s.total_expenses_fixed > 0) parts.push(`Fixos ${formatCurrency(s.total_expenses_fixed)}`);
+      if (s.total_expenses_variable > 0) parts.push(`Variáveis ${formatCurrency(s.total_expenses_variable)}`);
+      if ((s.total_expenses_debt||0)+(s.total_expenses_card||0) > 0)
+        parts.push(`Dívidas/Cartão ${formatCurrency((s.total_expenses_debt||0)+(s.total_expenses_card||0))}`);
+      fixedSub.textContent = parts.length > 0 ? parts.join(' · ') : 'Fixos + Variáveis + Dívidas';
+    }
+
+    // Subtítulo de receita
+    const incomeSub = document.getElementById('kpiIncomeSub');
+    if (incomeSub) incomeSub.textContent = `Total de entradas do mês`;
+
+    // Diagnóstico de sobra
+    const surplusDiag = document.getElementById('kpiSurplusDiag');
+    if (surplusDiag) surplusDiag.textContent = surplus > 500 ? 'Folga sólida consolidada' : surplus >= 0 ? 'Saldo positivo' : 'Atenção: déficit no mês';
+
     // Listas
     renderExpenses(data.expenses);
     renderIncome(data.income);
+
+    // Insights automáticos
+    renderInsights(s);
   } catch(e) {
     console.warn('loadBudgetMonth error:', e);
     renderExpenses([]);
     renderIncome([]);
   }
 }
+
 
 async function closeCurrentMonth() {
   if (!confirm(`Encerrar ${monthLabel(_viewYear, _viewMonth)}? Esta ação é irreversível.`)) return;

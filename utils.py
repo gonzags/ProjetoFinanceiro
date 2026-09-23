@@ -867,12 +867,33 @@ class DatabaseManager:
 
     # ── Credit Cards ──────────────────────────────────────────────────────────
     async def get_credit_cards(self, user_id) -> list:
+        if not self.is_connected or not self.pool:
+            return []
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT * FROM credit_cards WHERE user_id=$1 AND is_active=TRUE ORDER BY created_at",
                 int(user_id)
             )
             return [dict(r) for r in rows]
+
+    async def reseed_cards_from_profile(self, user_id: int) -> int:
+        """Re-salva os cartões armazenados no payload do onboarding para a tabela credit_cards."""
+        profile_raw = await self.get_onboarding_profile(user_id)
+        if not profile_raw:
+            return 0
+        profile = profile_raw
+        if isinstance(profile_raw, dict) and "onboarding_answers" in profile_raw:
+            profile = profile_raw["onboarding_answers"]
+        elif isinstance(profile_raw, dict) and "payload" in profile_raw:
+            profile = profile_raw["payload"]
+        cards = profile.get("cards") or profile.get("credit_cards") or []
+        count = 0
+        for card in cards:
+            if card.get("name") and card.get("closing_day") and card.get("due_day"):
+                await self.upsert_credit_card(user_id, card)
+                count += 1
+        return count
+
 
     async def upsert_credit_card(self, user_id, card: dict) -> dict:
         async with self.pool.acquire() as conn:
